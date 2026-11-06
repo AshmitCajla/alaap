@@ -1,0 +1,16 @@
+# Automatic HTTPS (Let's Encrypt) for the dashboard and the API.
+# Point DNS A records for both names at this server first.
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy dashboard:3000
+}
+
+{$API_DOMAIN} {
+	encode gzip zstd
+	# WebSockets (live calls, Exotel) are proxied automatically.
+	reverse_proxy api:8000
+}

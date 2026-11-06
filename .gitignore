@@ -1,0 +1,17 @@
+# secrets
+.env
+**/.env
+.env.*
+**/.env.*
+!.env.production.example
+!**/.env.example
+
+# local data and builds
+backend/data/
+backups/
+.venv/
+__pycache__/
+.pytest_cache/
+dashboard/node_modules/
+dashboard/.next/
+.DS_Store

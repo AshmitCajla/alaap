@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{NAME}} — talk to us</title>
+  <meta name="description" content="Call or chat with {{NAME}} any time, in Hindi, Punjabi or English.">
+  <style>
+    body { margin: 0; background: #eef4f3; font: 15px/1.5 system-ui, -apple-system, sans-serif; color: #1f2937; }
+    .wrap { max-width: 460px; margin: 0 auto; padding: 18px 16px 28px; }
+    .top { text-align: center; margin-bottom: 14px; }
+    .top h1 { margin: 4px 0 2px; font-size: 21px; }
+    .meta { color: #4b5563; font-size: 14px; }
+    .open { display: inline-block; padding: 1px 10px; border-radius: 99px; font-size: 13px; font-weight: 600; margin-top: 6px; }
+    .open.yes { background: #dcfce7; color: #15803d; } .open.no { background: #fee2e2; color: #b91c1c; }
+    .note { text-align: center; color: #6b7280; font-size: 12px; margin-top: 12px; }
+    body.embed .top, body.embed .note { display: none; }
+    body.embed .wrap { padding: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="meta">{{KIND}} · {{CITY}}</div>
+      <h1>{{NAME}}</h1>
+      <div class="meta">{{ADDRESS}}</div>
+      <span class="open {{OPEN_CLASS}}">{{OPEN_TEXT}}</span>
+    </div>
+    <script src="/widget.js" data-business="{{SLUG}}" data-inline="true"></script>
+    <div class="note">Talk or type in Hindi, Punjabi or English — 24×7. {{ASSISTANT}} is {{NAME}}'s AI assistant.</div>
+  </div>
+  <script>if (new URLSearchParams(location.search).get("embed")) document.body.classList.add("embed");</script>
+</body>
+</html>

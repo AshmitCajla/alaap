@@ -1,0 +1,91 @@
+# Production stack. Fill in .env (copy .env.production.example), then:  docker compose up -d --build
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api, dashboard]
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment: &backend_env
+      ALAAP_ENV: production
+      ALAAP_RUN_JOBS: "0"          # the worker service runs jobs
+      DATABASE_URL: postgresql+psycopg://alaap:${POSTGRES_PASSWORD}@postgres:5432/alaap
+      REDIS_URL: redis://redis:6379/0
+      PUBLIC_URL: https://${API_DOMAIN}
+      DASHBOARD_URL: https://${APP_DOMAIN}
+      ALAAP_MEDIA_DIR: /app/data/media
+    volumes: [media:/app/data]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend_env
+    command: ["python", "-m", "alaap.jobs"]
+    volumes: [media:/app/data]
+    healthcheck: {disable: true}
+    depends_on:
+      api: {condition: service_healthy}
+
+  dashboard:
+    build:
+      context: ./dashboard
+      args:
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alaap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: alaap
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alaap"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: alaap
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: alaap
+    volumes:
+      - ./deploy/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
+  caddy_data:
+  caddy_config:
