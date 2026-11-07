@@ -28,12 +28,16 @@ from .state import store
 from .timeutil import FMT, WEEKDAYS, now
 
 log = logging.getLogger("alaap.engine")
+BYE = re.compile(r"\b(bye|bas|thank|thanks|shukriya|dhanyavaad|dhanyawad|alvida|rakhta|rakhti|chalo|ok bye)\b|"
+                 r"बस|धन्यवाद|शुक्रिया|ਧੰਨਵਾਦ|ਬੱਸ", re.I)
 MAX_TOOL_ROUNDS = 8
 # Tools whose success needs no further words: if Alaap already spoke in the same message (the read-back,
 # "ho gaya ji"), the turn ends without a second LLM request. That halves the wait on most turns.
 # Orders are left out on purpose: their total must come from the tool, not from the model.
+# confirm_action is left out too: after "Ji, ho gaya!" the caller must hear their booking/order number, which only
+# exists once the tool has run.
 SELF_SPOKEN_OK = {"prepare_booking", "prepare_reschedule", "prepare_cancellation", "prepare_order_cancellation",
-                  "confirm_action", "end_call", "save_lead", "request_callback", "log_complaint",
+                  "end_call", "save_lead", "request_callback", "log_complaint",
                   "send_payment_link", "update_order_status", "set_stock"}
 
 FEMALE_VOICES = {"Shivani", "Lakshmi", "Kalpana", "Chetana", "Vasudha", "Riyaa", "Tarika", "Nalini", "Kaveri",
@@ -75,12 +79,15 @@ two replies the same way. No formal phrases like "How may I assist you" or "aapk
 - Don't repeat back what the caller just said, except in the final read-back before saving.
 - If you need to check something, you may first say a few words ("Ek second ji, dekh leti hoon.") and then call \
 the tool.
-- Offer at most two options at a time ("paanch baje ya saade chhe?").
-- The read-back is one easy sentence: "Toh kal shaam saade chhe baje, Gurpreet ke saath haircut, do sau rupaye. \
+- Offer at most two options at a time ("5 baje ya 6:30?").
+- The read-back is one easy sentence: "Toh kal shaam 6:30 baje, Gurpreet ke saath haircut, Rs 200. \
 Pakka kar doon?" Say it in the same message as the prepare_* call (for orders, wait for prepare_order's total).
-- When the customer says yes, say a short "Ji, ho gaya!" style line in the same message as confirm_action.
-- Say numbers as words: "do sau rupaye", "saade chhe baje". Read booking or order numbers digit by digit \
-("order number chhe ek do nau").
+- When the customer says yes, say a short "Ji, ho gaya!" style line in the same message as confirm_action; once it \
+returns, give them the booking or order number in one short sentence ("Booking number 8725 hai, WhatsApp par \
+confirmation aa jayega.").
+- Write every number in digits, copied exactly from the profile or tool result: prices "Rs 200", times "6:30", \
+booking and order numbers "8725". They are turned into natural spoken words automatically ("do sau rupaye", \
+"saade chhe baje", "aath saat do paanch"), so never spell numbers out yourself: that's how digits get wrong.
 - If you didn't catch something, ask the way a person would: "Maaf kijiye, line thodi saaf nahi thi, phir se \
 bataenge?" If the caller sounds upset, slow down and apologise once, sincerely.
 - Use the caller's name now and then once you know it, not in every sentence.
@@ -321,7 +328,8 @@ class Engine:
                 calls = msg.get("tool_calls") or []
                 if not calls:
                     break
-                results = [self._run_tool(ctx, call, handlers, actions) for call in calls]
+                results = [self._refuse_hangup(ctx, call) if self._early_hangup(call, calls, spoken, text)
+                           else self._run_tool(ctx, call, handlers, actions) for call in calls]
                 history += results
                 if ctx.end_call:
                     break
@@ -354,6 +362,21 @@ class Engine:
         return Reply(answer, handoff=ctx.handoff, end=ctx.end_call, conversation_id=conversation_id)
 
     # ---------- internals ----------
+
+    @staticmethod
+    def _early_hangup(call: dict, calls: list, spoken: list, text: str) -> bool:
+        """end_call only once the job is finished and said: never in the same step as another action (e.g. a silent
+        confirm-and-hang-up that never tells the caller their booking number), never before saying anything unless the
+        caller said bye."""
+        if call.get("function", {}).get("name") != "end_call":
+            return False
+        return len(calls) > 1 or not (spoken or BYE.search(text or ""))
+
+    def _refuse_hangup(self, ctx: Context, call: dict) -> dict:
+        result = {"error": "Don't hang up yet. First tell the customer the result in words (e.g. 'Ho gaya ji, booking "
+                           "number ...'), then end the call only after they say bye."}
+        self._log(ctx, "tool", f"end_call({{}}) -> {json.dumps(result, ensure_ascii=False)}")
+        return {"role": "tool", "tool_call_id": call["id"], "name": "end_call", "content": json.dumps(result)}
 
     def _setup(self, ctx: Context):
         with db.session() as s:

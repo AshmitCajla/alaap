@@ -37,6 +37,8 @@ LLM_PROVIDER = env("LLM_PROVIDER", "gemini")
 LLM_MODEL = env("LLM_MODEL")  # default depends on provider
 LLM_BASE_URL = env("LLM_BASE_URL")
 LLM_API_KEY = env("LLM_API_KEY")
+# Seconds to wait for one model before trying the next (callers are waiting; Gemini usually answers in ~2 s).
+LLM_TIMEOUT = float(env("LLM_TIMEOUT", "4.5"))
 LLM_REASONING = env("LLM_REASONING", "low")  # Gemini thinking: none | low | medium | high
 
 # Gnani (speech). https://docs.gnani.ai

@@ -196,6 +196,84 @@ def demo_activity() -> None:
         lambda s, b: {"reason": "Asks about bridal makeup packages", "name": "Kiran"})])
 
 
+DEMO_CHATS = [  # (channel, first message, Alaap's answer, outcome)
+    ("phone", "Kal shaam haircut ka slot hai?", "Ji, 5 baje ya 6:30, kaunsa theek rahega?", "booked"),
+    ("whatsapp", "Facial kitne ka hai?", "Facial Rs 800 ka hai ji, 60 minute lagte hain. Book kar doon?", "booked"),
+    ("phone", "Sunday ko khule ho?", "Ji, Sunday 10 se 6 khule hain.", "answered"),
+    ("web", "Hair colour ka rate?", "Hair colour Rs 1200 se shuru hai ji.", "answered"),
+    ("phone", "Beard trim abhi ho jayega?", "Ji, 4:15 par Raju free hain. Pakka kar doon?", "booked"),
+    ("whatsapp", "Parking hai kya?", "Ji, dukaan ke saamne parking hai.", "answered"),
+    ("phone", "Mera appointment kal 11 se 12 kar do", "Ho gaya ji, kal 12 baje.", "rescheduled"),
+    ("phone", "Bridal package ke baare mein baat karni hai", "Ji, Harpreet aapko aaj call karenge.", "callback"),
+]
+
+
+def demo_history(days: int = 7) -> None:
+    """A lived-in week for demos and screenshots: past conversations, completed visits, quick replies.
+    Sample data only: never run against a real business's database."""
+    import random
+    from datetime import timedelta
+
+    from .timeutil import now
+
+    rnd = random.Random(7)
+    t = now()
+    with db.session() as s:
+        biz = s.scalar(select(models.Business).where(models.Business.slug == "glow-salon"))
+        services = {sv.name: sv for sv in biz.services}
+        staff = [st for st in biz.staff if st.active]
+        names = ["Aman", "Priya", "Gurdeep", "Simran", "Rahul", "Neha", "Jaspreet", "Karan", "Manpreet", "Pooja"]
+        n = 0
+        for d in range(days, 0, -1):
+            for _ in range(rnd.randint(3, 7)):
+                channel, said, reply, outcome = rnd.choice(DEMO_CHATS)
+                at = (t - timedelta(days=d)).replace(hour=rnd.randint(10, 19), minute=rnd.choice([0, 15, 30, 45]),
+                                                    second=0, microsecond=0)
+                phone = f"98765{rnd.randint(10000, 99999)}"
+                conv = models.Conversation(business_id=biz.id, channel=channel, caller_phone=phone, outcome=outcome,
+                                           started_at=at, last_at=at, ended_at=at + timedelta(minutes=2),
+                                           phone_verified=channel != "web",
+                                           call_seconds=rnd.randint(50, 150) if channel == "phone" else 0,
+                                           handoff=outcome == "callback")
+                s.add(conv)
+                s.flush()
+                s.add_all([models.Message(conversation_id=conv.id, role="customer", text=said, created_at=at),
+                           models.Message(conversation_id=conv.id, role="alaap", text=reply, created_at=at,
+                                          latency_ms=rnd.randint(900, 1900))])
+                if outcome == "booked":
+                    sv = services.get("Facial" if "Facial" in said else "Beard trim" if "Beard" in said
+                                      else "Haircut (men)")
+                    cust = s.scalar(select(models.Customer).where(models.Customer.business_id == biz.id,
+                                                                  models.Customer.phone == phone))
+                    if not cust:
+                        cust = models.Customer(business_id=biz.id, name=rnd.choice(names), phone=phone)
+                        s.add(cust)
+                        s.flush()
+                    n += 1
+                    s.add(models.Appointment(ref=str(4100 + n), business_id=biz.id, customer_id=cust.id,
+                                             service_id=sv.id, staff_id=rnd.choice(staff).id, start_at=at,
+                                             end_at=at + timedelta(minutes=sv.duration_min), status="done",
+                                             channel=channel, conversation_id=conv.id, created_at=at, updated_at=at))
+                if outcome == "callback":
+                    s.add(models.Ticket(business_id=biz.id, kind="callback", name=rnd.choice(names), phone=phone,
+                                        issue="Asked about bridal makeup packages", status="closed",
+                                        conversation_id=conv.id, created_at=at))
+
+
+def demo_reset() -> None:
+    """Wipe and rebuild the demo database: 3 demo shops, today's bookings, a week of history, a team login and two
+    free numbers in the pool. Refuses in production."""
+    from . import config, managed
+
+    if config.PRODUCTION:
+        raise SystemExit("demo-reset is for demo databases only, never production.")
+    seed(reset=True)
+    demo_history()
+    demo_activity()
+    with db.session() as s:
+        managed.add_numbers(s, ["08047112345", "08047112346"], monthly_cost_inr=0, notes="demo numbers")
+
+
 if __name__ == "__main__":
     print("Seeded businesses", seed(reset="--reset" in sys.argv), f"(owner password: {DEMO_PASSWORD})")
     if "--demo-data" in sys.argv:

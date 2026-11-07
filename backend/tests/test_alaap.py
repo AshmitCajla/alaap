@@ -462,3 +462,21 @@ def test_signup_with_real_clock(monkeypatch):
         assert r.status_code == 200
         st = client.get("/api/billing", headers={"Authorization": f"Bearer {r.json()['token']}"}).json()["status"]
         assert st["state"] == "trial" and st["days_left"] in (13, 14)
+
+
+def test_no_silent_hang_up_after_confirming():
+    """Live voice test found: confirm_action + end_call in one step hung up without telling the caller the result."""
+    cut = ids(models.Service, "Haircut (men)", SALON)
+    hang = {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "c", "type": "function", "function": {"name": "confirm_action", "arguments": '{"action_id": "A1"}'}},
+        {"id": "e", "type": "function", "function": {"name": "end_call", "arguments": "{}"}}]}
+    llm = FakeLLM([{**tc("1", "prepare_booking", customer_name="Rohit", service_id=cut, start="2026-11-10 17:00"),
+                    "content": "Kal paanch baje haircut, pakka kar doon?"},
+                   hang, say("Ho gaya ji! Booking number ek do teen chaar.")])
+    e = Engine(llm=llm, state=MemoryStore())
+    cid = e.start(SALON, "phone", "9876543210", verified=True).conversation_id
+    e.reply(cid, "kal 5 baje haircut, naam Rohit")
+    r = e.reply(cid, "haan ji pakka kar do")
+    assert not r.end and "Ho gaya" in r.text
+    with db.session() as s:
+        assert s.scalar(select(func.count(models.Appointment.id)).where(models.Appointment.conversation_id == cid)) == 1

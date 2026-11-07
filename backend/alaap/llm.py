@@ -52,7 +52,8 @@ class LLM:
             self.client = client
         else:
             key = key or "not-needed"
-            self.client = OpenAI(base_url=config.LLM_BASE_URL or base_url, api_key=key, max_retries=0, timeout=6)  # fall through models instead
+            self.client = OpenAI(base_url=config.LLM_BASE_URL or base_url, api_key=key, max_retries=0,
+                                 timeout=config.LLM_TIMEOUT)  # fall through models instead
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None, temperature: float | None = None,
              on_text=None) -> dict:

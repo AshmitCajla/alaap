@@ -7,6 +7,7 @@
   python -m alaap.admin deactivate SLUG               # stop a business answering (keeps its data)
   python -m alaap.admin seed-demo                     # add the three demo businesses
   python -m alaap.admin create-operator EMAIL [NAME]  # an Alaap team login for the operator console (/ops)
+  python -m alaap.admin demo-reset                    # WIPE a *demo* database and fill it with fresh demo data
 """
 
 import secrets
@@ -28,6 +29,17 @@ def main(argv: list[str]) -> int:
         problems = config.check()
         print("\n".join(problems) if problems else "All good.")
         return 1 if any(p.startswith("FATAL") for p in problems) else 0
+    if cmd == "demo-reset":
+        if "demo" not in config.DATABASE_URL and "--force" not in args:
+            print(f"Refusing: DATABASE_URL ({config.DATABASE_URL}) doesn't look like a demo database.\n"
+                  "Use e.g. DATABASE_URL=sqlite:///data/demo.db, or add --force if you're sure.")
+            return 1
+        from . import seed
+
+        seed.demo_reset()
+        print("Demo data ready: 3 shops, a week of history, team login team@alaap.dev, 2 free numbers. "
+              f"Owner logins: owner@glow.demo / owner@kirana.demo / owner@coaching.demo (password {seed.DEMO_PASSWORD})")
+        return 0
     db.create_all()
     with db.session() as s:
         if cmd == "businesses":

@@ -49,6 +49,11 @@ GOODBYE_IN = re.compile(r"\b(bye|bas|thank|thanks|shukriya|dhanyavaad|dhanyawad|
                         r"rakhti|rakhta|chalo)\b|बस|धन्यवाद|शुक्रिया|thank|ਧੰਨਵਾਦ|ਬੱਸ", re.I)
 GOODBYE_OUT = re.compile(r"(sat sri akal|alvida|phir milte|dhanyavaad|shukriya|namaste|bye|good ?day|take care)"
                          r"[^?]*[.!]?\s*$", re.I)
+# A caller who only greets ("Sat Sri Akal ji." ... "kal haircut ho jayega?") is about to say why they called.
+GREETING_ONLY = re.compile(r"^\W*((sat|saat|साठ|सत|ਸਤਿ|ਸਾਟ)\W*(sri|shri|श्री|श्रि|ਸ\S{0,3}ਰੀ)\W*(akal|अकाल|ਅਕਾਲ)|namaste|namaskar|"
+                           r"नमस्ते|नमस्कार|ਨਮਸਤੇ|hello|hi|हेलो|हैलो|ਹੈਲੋ|haan ji|हाँ जी|हां जी|ਹਾਂ ਜੀ|ji|जी)"
+                           r"(\W+(ji|जी|ਜੀ|sir|सर))*\W*$", re.I)
+GREETING_MERGE_S = 1.8
 ACK_AFTER_S = 1.1             # say "achha" if nothing has been said by then
 FILLER_AFTER_S = 3.2          # say "ek second ji" if still nothing
 SILENCE_PROMPT_S = 9.0        # "aap line par hain?"
@@ -239,7 +244,11 @@ class CallSession:
 
     async def _after_merge_window(self) -> None:
         so_far = " ".join(self.pending_text)
-        await asyncio.sleep(SHORT_MERGE_S if len(so_far.split()) <= 3 else MERGE_WINDOW_S)
+        # Short openers ("haan ji", "Sat Sri Akal ji") are usually followed by the actual request after a pause.
+        if GREETING_ONLY.match(so_far):
+            await asyncio.sleep(GREETING_MERGE_S)
+        else:
+            await asyncio.sleep(SHORT_MERGE_S if len(so_far.split()) <= 4 else MERGE_WINDOW_S)
         waited = time.time()
         while (self.caller_talking or self._mid_speech()) and time.time() - waited < MAX_MERGE_S:
             await asyncio.sleep(0.1)  # they're still talking; wait for the rest of the sentence
