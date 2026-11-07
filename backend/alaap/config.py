@@ -57,6 +57,15 @@ WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", "v21.0")
 # Create a "Utility" template with two body variables, e.g. "Update from {{1}}: {{2}}", and name it here.
 WHATSAPP_TEMPLATE_NAME = env("WHATSAPP_TEMPLATE_NAME")
 WHATSAPP_TEMPLATE_LANG = env("WHATSAPP_TEMPLATE_LANG", "en")
+# Alaap's own WhatsApp number, shared by every managed shop that has no number of its own. Customers reach a
+# shop through its code (the QR poster opens wa.me/<number>?text=<CODE>); owners send menus here to get set up.
+WHATSAPP_SHARED_NUMBER_ID = env("WHATSAPP_SHARED_NUMBER_ID")  # Meta phone-number ID
+WHATSAPP_SHARED_NUMBER = env("WHATSAPP_SHARED_NUMBER")        # the number itself, e.g. 919800000000
+
+# Rough running costs per shop, for the operator console's usage page (edit to your real rates).
+COST_CALL_MIN_INR = float(env("COST_CALL_MIN_INR", "1.5"))     # telephony + speech + LLM per call minute
+COST_WA_MSG_INR = float(env("COST_WA_MSG_INR", "0.15"))        # per WhatsApp message sent (avg incl. templates)
+COST_CHAT_TURN_INR = float(env("COST_CHAT_TURN_INR", "0.05"))  # LLM per customer message on web/WhatsApp
 
 # Razorpay. Without keys, payment links point to a local mock page.
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID")
@@ -126,6 +135,8 @@ def check() -> list[str]:
         warn.append("WHATSAPP_TOKEN not set: WhatsApp messages stay in the dashboard outbox.")
     elif not WHATSAPP_TEMPLATE_NAME:
         warn.append("WHATSAPP_TEMPLATE_NAME not set: reminders outside the 24-hour window will fail.")
+    if WHATSAPP_SHARED_NUMBER_ID and not WHATSAPP_SHARED_NUMBER:
+        warn.append("WHATSAPP_SHARED_NUMBER not set: share kits can't show the shared WhatsApp link.")
     if not EXOTEL_WS_TOKEN:
         warn.append("EXOTEL_WS_TOKEN not set: phone calls via Exotel are refused until you set it.")
     if not RAZORPAY_KEY_ID:

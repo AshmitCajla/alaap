@@ -31,21 +31,23 @@ def send_outbox(limit: int = 50) -> int:
             biz = s.get(models.Business, item.business_id)
             if item.send_after > now(biz.timezone):
                 continue
-            if not (whatsapp.enabled() and biz.whatsapp_phone_number_id):
+            pnid = whatsapp.sender_id(biz)
+            if not (whatsapp.enabled() and pnid):
                 item.status = "logged"  # nowhere to send; stays visible on the dashboard
                 continue
+            body = whatsapp.labelled(biz, item.body)
             item.attempts += 1
             try:
                 try:
                     if item.channel == "whatsapp_voice" and item.media_path:
                         with open(item.media_path, "rb") as f:
-                            whatsapp.send_audio(biz.whatsapp_phone_number_id, item.to_phone, f.read())
-                    whatsapp.send_text(biz.whatsapp_phone_number_id, item.to_phone, item.body)
+                            whatsapp.send_audio(pnid, item.to_phone, f.read())
+                    whatsapp.send_text(pnid, item.to_phone, body)
                 except Exception as e:
                     # Outside WhatsApp's 24-hour window only approved templates may be sent.
                     if not (whatsapp.needs_template(e) and config.WHATSAPP_TEMPLATE_NAME):
                         raise
-                    whatsapp.send_template(biz.whatsapp_phone_number_id, item.to_phone, biz.name, item.body)
+                    whatsapp.send_template(pnid, item.to_phone, biz.name, item.body)
                 item.status, item.sent_at = "sent", now(biz.timezone)
                 sent += 1
             except Exception as e:  # e.g. outside the 24-hour window without an approved template

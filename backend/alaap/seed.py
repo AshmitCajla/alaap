@@ -111,8 +111,13 @@ def seed(reset: bool = False) -> list[int]:
             biz, email = make()
             existing = s.scalar(select(models.Business).where(models.Business.slug == biz.slug))
             if existing:
+                if not existing.code:
+                    from .managed import make_code
+                    existing.code = make_code(s, existing.name)
                 ids.append(existing.id)
                 continue
+            from .managed import make_code
+            biz.code = make_code(s, biz.name)
             s.add(biz)
             s.flush()
             # In production the demo owners get random passwords (the demos stay public; their logins don't).
@@ -125,6 +130,12 @@ def seed(reset: bool = False) -> list[int]:
             if config.PRODUCTION:
                 print(f"demo owner {email}: {password}")
             ids.append(biz.id)
+        # Development only: an Alaap team login for the operator console.
+        from . import config
+        if not config.PRODUCTION and not s.scalar(select(models.Operator.id).where(
+                models.Operator.email == "team@alaap.dev")):
+            s.add(models.Operator(email="team@alaap.dev", name="Alaap team",
+                                  password_hash=auth.hash_password(DEMO_PASSWORD)))
     return ids
 
 

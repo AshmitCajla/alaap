@@ -118,7 +118,7 @@ class Endpointer:
 
 
 class CallSession:
-    def __init__(self, ws: WebSocket, business_id: int, trust_caller_id: bool = False):
+    def __init__(self, ws: WebSocket, business_id: int | None, trust_caller_id: bool = False):
         self.ws = ws
         self.business_id = business_id
         # Only Exotel (authenticated by EXOTEL_WS_TOKEN) supplies a real caller number. A browser could claim anything.
@@ -382,7 +382,16 @@ class CallSession:
         self.stream_sid = event.get("stream_sid") or start.get("stream_sid")
         self.rate = int(start.get("media_format", {}).get("sample_rate", 8000))
         self.endpointer = Endpointer(self.rate)
-        caller = (start.get("from") or start.get("custom_parameters", {}).get("from")) if self.trust_caller_id else None
+        custom = start.get("custom_parameters") or {}
+        caller = (start.get("from") or custom.get("from")) if self.trust_caller_id else None
+        if self.business_id is None:  # shared Exotel flow: route by the number the caller dialled
+            dialled = start.get("to") or custom.get("to") or start.get("exophone") or custom.get("exophone")
+            self.business_id = business_for_call(None, dialled)
+            if not self.business_id:
+                log.warning("Call to unknown number %s", dialled)
+                self.closing = True
+                await self.ws.close(code=1008, reason="number not assigned to a shop")
+                raise WebSocketDisconnect(code=1008)
         keyterms = []
         with db.session() as s:
             biz = s.get(models.Business, self.business_id)
@@ -439,6 +448,8 @@ def business_for_call(slug: str | None, to_number: str | None) -> int | None:
         q = select(models.Business.id)
         if slug:
             return s.scalar(q.where(models.Business.slug == slug))
-        if to_number:
-            return s.scalar(q.where(models.Business.exotel_number == to_number[-10:]))
+        digits = re.sub(r"\D", "", to_number or "")
+        if len(digits) >= 10:
+            return s.scalar(q.where(models.Business.exotel_number == digits[-10:],
+                                    models.Business.active.is_(True)))
     return None

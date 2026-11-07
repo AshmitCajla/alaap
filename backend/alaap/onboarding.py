@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 import httpx
 from sqlalchemy import select
 
-from . import models
+from . import config, models
 from .llm import LLM
 
 log = logging.getLogger("alaap.onboarding")
@@ -83,11 +83,12 @@ def apply_template(biz: models.Business) -> None:
     """Fill a brand-new business with its kind's starter data (marked as samples to edit)."""
     t = TEMPLATES.get(biz.kind, TEMPLATES["salon"])
     biz.hours = [models.BusinessHours(weekday=d, opens=o, closes=c) for d, o, c in t.get("hours", [])]
-    services = [models.Service(name=n, duration_min=m, price_inr=p, notes="Sample - edit me")
+    services = [models.Service(name=n, duration_min=m, price_inr=p, notes="Sample - edit me", active=True)
                 for n, m, p in t.get("services", [])]
     biz.services = services
-    biz.staff = [models.Staff(name=n, services=list(services)) for n, _ in t.get("staff", [])]
-    biz.products = [models.Product(name=n, aliases=a, unit=u, price_inr=p) for n, a, u, p in t.get("products", [])]
+    biz.staff = [models.Staff(name=n, services=list(services), active=True) for n, _ in t.get("staff", [])]
+    biz.products = [models.Product(name=n, aliases=a, unit=u, price_inr=p, active=True)
+                    for n, a, u, p in t.get("products", [])]
     biz.slots = [models.DeliverySlot(start=s, end=e) for s, e in t.get("slots", [])]
     biz.faqs = [models.Faq(question=q, answer=a) for q, a in t.get("faqs", [])]
 
@@ -183,20 +184,27 @@ def clean(data: dict) -> dict:
                 out["hours"].append({"weekday": d, "opens": o.zfill(5), "closes": c.zfill(5)})
         except (TypeError, ValueError):
             continue
+    on_request = []  # no price given ("bridal makeup on call"): never let the assistant quote Rs 0
     for s in data.get("services") or []:
         if s.get("name"):
-            out["services"].append({"name": str(s["name"])[:200], "price_inr": _int(s.get("price_inr")),
-                                    "duration_min": max(5, min(480, _int(s.get("duration_min"), 30)))})
+            row = {"name": str(s["name"])[:200], "price_inr": _int(s.get("price_inr")),
+                   "duration_min": max(5, min(480, _int(s.get("duration_min"), 30)))}
+            (out["services"] if row["price_inr"] > 0 else on_request).append(row)
     for p in data.get("products") or []:
         if p.get("name"):
-            out["products"].append({"name": str(p["name"])[:200], "price_inr": _int(p.get("price_inr")),
-                                    "unit": str(p.get("unit") or "1 pc")[:50], "aliases": p.get("aliases") or None})
+            row = {"name": str(p["name"])[:200], "price_inr": _int(p.get("price_inr")),
+                   "unit": str(p.get("unit") or "1 pc")[:50], "aliases": p.get("aliases") or None}
+            (out["products"] if row["price_inr"] > 0 else on_request).append(row)
     for st in data.get("staff") or []:
         if st.get("name"):
             out["staff"].append({"name": str(st["name"])[:100], "services": [str(x) for x in st.get("services") or []]})
     for f in data.get("faqs") or []:
         if f.get("question") and f.get("answer"):
             out["faqs"].append({"question": str(f["question"])[:200], "answer": str(f["answer"])[:1000]})
+    for row in on_request:
+        out["faqs"].append({"question": f"{row['name']} price",
+                            "answer": f"{row['name']}: price on request. Don't quote a price; offer a callback "
+                                      "from the owner (take the customer's name and number)."})
     return out
 
 
@@ -224,7 +232,8 @@ def apply(s, biz: models.Business, data: dict, replace_samples: bool = True) -> 
         if sv:
             sv.price_inr, sv.duration_min, sv.active, sv.notes = item["price_inr"], item["duration_min"], True, None
         else:
-            sv = models.Service(name=item["name"], price_inr=item["price_inr"], duration_min=item["duration_min"])
+            sv = models.Service(name=item["name"], price_inr=item["price_inr"], duration_min=item["duration_min"],
+                                active=True)
             biz.services.append(sv)
             by_name[sv.name.lower()] = sv
         counts["services"] += 1
@@ -241,7 +250,7 @@ def apply(s, biz: models.Business, data: dict, replace_samples: bool = True) -> 
             p.aliases = item["aliases"] or p.aliases
         else:
             biz.products.append(models.Product(name=item["name"], price_inr=item["price_inr"], unit=item["unit"],
-                                               aliases=item["aliases"]))
+                                               aliases=item["aliases"], active=True))
         counts["products"] += 1
     active_services = [sv for sv in biz.services if sv.active]
     staff_by_name = {st.name.lower(): st for st in biz.staff}
@@ -251,10 +260,10 @@ def apply(s, biz: models.Business, data: dict, replace_samples: bool = True) -> 
         if st:
             st.services, st.active = does, True
         else:
-            biz.staff.append(models.Staff(name=item["name"], services=does))
+            biz.staff.append(models.Staff(name=item["name"], services=does, active=True))
         counts["staff"] += 1
     if not any(st.active for st in biz.staff) and active_services:
-        biz.staff.append(models.Staff(name=biz.owner_name or "Owner", services=active_services))
+        biz.staff.append(models.Staff(name=biz.owner_name or "Owner", services=active_services, active=True))
     if replace_samples and data["faqs"]:
         samples = {(q, a) for q, a in TEMPLATES.get(biz.kind, {}).get("faqs", [])}
         biz.faqs = [f for f in biz.faqs if (f.question, f.answer) not in samples]  # don't contradict the import
@@ -285,7 +294,8 @@ def checklist(s, biz: models.Business) -> list[dict]:
          "hint": "Open your customer page and press Call."},
         {"key": "share", "label": "Put your QR poster on the counter", "done": bool(biz.shared_at),
          "hint": "Share kit → print the poster."},
-        {"key": "whatsapp", "label": "Connect WhatsApp (optional)", "done": bool(biz.whatsapp_phone_number_id),
+        {"key": "whatsapp", "label": "Connect WhatsApp (optional)", "done": bool(biz.whatsapp_phone_number_id or (
+            biz.managed and biz.code and config.WHATSAPP_SHARED_NUMBER_ID)),
          "hint": "Settings → Channels."},
         {"key": "phone", "label": "Forward missed calls to Alaap (optional)", "done": bool(biz.exotel_number),
          "hint": "Share kit → call forwarding."},

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Camera, Check as CheckIcon, FileText, Globe, PartyPopper, Phone, QrCode, Upload } from "lucide-react";
+import { PageHead } from "../../../lib/ui";
 import { API, api, getToken } from "../../../lib/api";
 import { useMe } from "../../../lib/Shell";
 import VoicePicker from "../../../lib/VoicePicker";
@@ -10,9 +12,17 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function Stepper({ step, setStep }) {
   return (
-    <div className="tabs" style={{ marginBottom: 20 }}>
+    <div className="row" style={{ gap: 0, marginBottom: 24, flexWrap: "nowrap", overflowX: "auto" }}>
       {STEPS.map((s, i) => (
-        <button key={s} className={step === i ? "on" : ""} onClick={() => setStep(i)}>{i + 1}. {s}</button>
+        <div key={s} className="row" style={{ gap: 0, flexWrap: "nowrap", flex: i < STEPS.length - 1 ? 1 : "none" }}>
+          <button onClick={() => setStep(i)} className="row" style={{ gap: 8, background: "none", border: 0, cursor: "pointer", padding: "4px 6px", flexWrap: "nowrap" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 99, display: "grid", placeItems: "center", fontWeight: 700, fontSize: 13, flex: "none",
+              background: i < step ? "var(--good)" : i === step ? "var(--brand)" : "var(--line-2)", color: i <= step ? "#fff" : "var(--muted)" }}>
+              {i < step ? <CheckIcon size={15} /> : i + 1}</span>
+            <span className="nowrap" style={{ fontWeight: i === step ? 700 : 500, color: i === step ? "var(--text)" : "var(--muted)", fontSize: 14 }}>{s}</span>
+          </button>
+          {i < STEPS.length - 1 && <div style={{ flex: 1, height: 2, minWidth: 16, background: i < step ? "var(--good)" : "var(--line)", margin: "0 4px" }} />}
+        </div>
       ))}
     </div>
   );
@@ -51,16 +61,16 @@ function Teach({ onData }) {
       <h2 style={{ marginTop: 0 }}>Teach Alaap your business in one minute</h2>
       <p className="small muted">Alaap reads your rate card, menu or price list and fills in services, prices, timings and
         common questions. You check everything on the next step before it's saved.</p>
-      <div className="tabs">
-        <button className={mode === "photo" ? "on" : ""} onClick={() => setMode("photo")}>📷 Photo of rate card / menu</button>
-        <button className={mode === "text" ? "on" : ""} onClick={() => setMode("text")}>📝 Paste price list</button>
-        <button className={mode === "url" ? "on" : ""} onClick={() => setMode("url")}>🌐 Website</button>
+      <div className="seg">
+        <button className={mode === "photo" ? "on" : ""} onClick={() => setMode("photo")}><Camera size={14} style={{ verticalAlign: -2 }} /> Photo</button>
+        <button className={mode === "text" ? "on" : ""} onClick={() => setMode("text")}><FileText size={14} style={{ verticalAlign: -2 }} /> Paste text</button>
+        <button className={mode === "url" ? "on" : ""} onClick={() => setMode("url")}><Globe size={14} style={{ verticalAlign: -2 }} /> Website</button>
       </div>
       {mode === "photo" && (
-        <div className="card" style={{ textAlign: "center", borderStyle: "dashed", padding: 28, cursor: "pointer" }}
+        <div className="card flat" style={{ textAlign: "center", borderStyle: "dashed", borderWidth: 2, padding: 34, cursor: "pointer", background: "var(--panel-2)" }}
           onClick={() => file.current?.click()}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); e.dataTransfer.files[0] && readPhoto(e.dataTransfer.files[0]); }}>
-          <div style={{ fontSize: 36 }}>📷</div>
+          <div className="empty" style={{ padding: 0 }}><div className="ico"><Upload size={24} /></div></div>
           <b>{busy ? "Reading your photo…" : "Tap to take or upload a photo"}</b>
           <div className="small muted">Rate card on the wall, printed menu, handwritten price list — all fine.</div>
           <input ref={file} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
@@ -168,7 +178,7 @@ function Try({ slug, onDone }) {
     <div className="split" style={{ gridTemplateColumns: "1fr 440px" }}>
       <div>
         <h2 style={{ marginTop: 0 }}>Call your own front desk</h2>
-        <p className="small">Press <b>📞 Call</b> and talk like a customer. Try:</p>
+        <p className="small">Press <b><Phone size={13} style={{ verticalAlign: -2 }} /> Call</b> and talk like a customer. Try:</p>
         <ul className="small">
           <li>"Kal shaam ka slot hai kya?" / "Do packet atta bhej do"</li>
           <li>"Rate kitna hai?" / "Parking hai?"</li>
@@ -189,8 +199,7 @@ export default function Setup() {
   const [data, setData] = useState(null);
   return (
     <>
-      <h1>Set up {me.business.name}</h1>
-      <p className="sub">Five quick steps. Alaap already works with sample data, so you can stop anytime.</p>
+      <PageHead title={`Set up ${me.business.name}`} sub="Five quick steps. Your assistant already works with sample data, so you can stop any time." />
       <Stepper step={step} setStep={setStep} />
       {step === 0 && <><Teach onData={(d) => { setData(d); setStep(1); }} />
         <p className="small" style={{ marginTop: 12 }}><a href="#" onClick={(e) => { e.preventDefault(); setStep(2); }}>Skip — I'll edit prices later</a></p></>}
@@ -199,14 +208,15 @@ export default function Setup() {
       {step === 3 && <Try slug={me.business.slug} onDone={() => setStep(4)} />}
       {step === 4 && (
         <div className="card" style={{ maxWidth: 680 }}>
-          <h2 style={{ marginTop: 0 }}>🎉 You're live</h2>
+          <div className="empty" style={{ padding: "8px 0 0", textAlign: "left" }}><div className="ico" style={{ margin: "0 0 12px" }}><PartyPopper size={24} /></div></div>
+          <h2 style={{ marginTop: 0, fontSize: 20 }}>You're live</h2>
           <p>Customers can now talk to {me.business.name} any time. Put it where they'll find it:</p>
           <ul>
             <li><b>Shop counter:</b> print the QR poster.</li>
             <li><b>Phone:</b> forward missed calls with a one-time code.</li>
             <li><b>WhatsApp / Instagram / Google:</b> share your page link.</li>
           </ul>
-          <a className="btn" href="/share" style={{ display: "inline-block" }}>Open the share kit</a>
+          <a className="btn" href="/share"><QrCode size={16} />Open the share kit</a>
         </div>
       )}
     </>

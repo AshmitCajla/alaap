@@ -24,6 +24,9 @@
   .alaap-m{max-width:82%;padding:9px 12px;border-radius:16px;white-space:pre-wrap;word-wrap:break-word}
   .alaap-m.a{background:#fff;border:1px solid #e5e7eb;align-self:flex-start;border-bottom-left-radius:4px}
   .alaap-m.u{background:#0f766e;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .alaap-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .alaap-chips button{border:1px solid #b9dcd8;background:#fff;color:#0f766e;border-radius:16px;padding:6px 12px;font:inherit;
+    font-size:13.5px;cursor:pointer}.alaap-chips button:hover{background:#e6f2f1}
   .alaap-m.n{align-self:center;background:none;color:#6b7280;font-size:13px;padding:2px}
   .alaap-typing{display:inline-flex;gap:4px}.alaap-typing i{width:6px;height:6px;border-radius:50%;background:#9ca3af;
     animation:alaapdot 1s infinite}.alaap-typing i:nth-child(2){animation-delay:.15s}.alaap-typing i:nth-child(3){animation-delay:.3s}
@@ -108,11 +111,30 @@
     await loadInfo();
     conv = await api("/api/chat/" + SLUG + "/start", {});
     add(conv.text, "a");
+    chips();
     return conv;
+  }
+
+  // One-tap starters so a first-time visitor doesn't face an empty box.
+  function chips() {
+    const sk = new Set((info && info.skills) || []);
+    const opts = [["Rate list", "Aapke rates kya hain?"]];
+    if (sk.has("appointments")) opts.push(["Book a slot", "Mujhe appointment book karni hai"]);
+    if (sk.has("orders")) opts.push(["Place an order", "Mujhe order karna hai"]);
+    if (sk.has("leads")) opts.push(["Fees & batches", "Fees aur batch timings batao"]);
+    opts.push(["Timings", "Aap kab khule ho?"], ["Address", "Address kya hai?"]);
+    const row = document.createElement("div"); row.className = "alaap-chips";
+    opts.forEach(([label, say]) => {
+      const b = document.createElement("button"); b.textContent = label;
+      b.onclick = () => { row.remove(); send(say); };
+      row.appendChild(b);
+    });
+    log.appendChild(row); log.scrollTop = log.scrollHeight;
   }
 
   async function send(text) {
     text = (text || "").trim(); if (!text || busy) return;
+    const c = log.querySelector(".alaap-chips"); if (c) c.remove();
     busy = true; input.value = ""; add(text, "u");
     const t = typing();
     try {

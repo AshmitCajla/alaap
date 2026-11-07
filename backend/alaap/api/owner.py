@@ -7,9 +7,9 @@ import asyncio
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 
-from .. import auth, billing, config, db, jobs, metrics, models, onboarding, ratelimit
+from .. import auth, billing, config, db, jobs, managed, metrics, models, onboarding, ratelimit
 from ..engine import get_engine
 from ..scheduling import parse_date
 from ..skills import DEFAULT_SKILLS, PLANS, REGISTRY
@@ -70,6 +70,7 @@ def signup(body: Signup, request: Request):
                               owner_name=body.owner_name.strip(), owner_phone=phone, skills=DEFAULT_SKILLS[body.kind],
                               plan="starter" if body.kind in ("salon", "clinic") else
                               ("pro" if body.kind in ("kirana", "restaurant", "pharmacy") else "business"))
+        biz.code = managed.make_code(s, biz.name)  # reachable on Alaap's shared WhatsApp too
         onboarding.apply_template(biz)  # works from minute one; the owner replaces samples in the setup wizard
         biz.trial_ends_at = now(biz.timezone) + timedelta(days=config.TRIAL_DAYS)
         s.add(biz)
@@ -94,10 +95,13 @@ def _biz(s, owner: Owner) -> models.Business:
 def me(owner: Owner = Depends(current_owner)):
     with db.session() as s:
         biz = _biz(s, owner)
-        user = s.get(models.OwnerUser, owner.user_id)
-        return {"user": {"name": user.name, "email": user.email},
+        user = s.get(models.OwnerUser, owner.user_id) if owner.user_id else None
+        return {"user": {"name": user.name, "email": user.email} if user else
+                        {"name": "Alaap team", "email": None, "support": True},
                 "business": {"id": biz.id, "slug": biz.slug, "name": biz.name, "kind": biz.kind, "plan": biz.plan,
-                             "skills": biz.skill_list()},
+                             "skills": biz.skill_list(), "managed": bool(biz.managed), "code": biz.code,
+                             "stage": biz.stage or "live", "exotel_number": biz.exotel_number,
+                             "whatsapp_link": managed.whatsapp_link(biz)},
                 "plans": {k: {**v, "skills": sorted(v["skills"])} for k, v in PLANS.items()},
                 "all_skills": {k: sk.name for k, sk in REGISTRY.items() if k != "owner"}}
 
@@ -106,6 +110,17 @@ def me(owner: Owner = Depends(current_owner)):
 def overview(days: int = 7, owner: Owner = Depends(current_owner)):
     with db.session() as s:
         return metrics.overview(s, _biz(s, owner), max(1, min(days, 90)))
+
+
+@router.get("/counts")
+def counts(owner: Owner = Depends(current_owner)):
+    """Small numbers for the menu badges (polled; kept cheap)."""
+    with db.session() as s:
+        biz = _biz(s, owner)
+        items = onboarding.checklist(s, biz)
+        return {"open_tickets": s.scalar(select(func.count(models.Ticket.id)).where(
+                    models.Ticket.business_id == biz.id, models.Ticket.status == "open")) or 0,
+                "setup_left": sum(1 for i in items if not i["done"])}
 
 
 def _dt(d):
@@ -217,17 +232,18 @@ def update_ticket(ticket_id: int, body: StatusUpdate, owner: Owner = Depends(cur
 
 @router.get("/conversations")
 def conversations(limit: int = 50, owner: Owner = Depends(current_owner)):
+    C, M = models.Conversation, models.Message
     with db.session() as s:
-        rows = s.scalars(select(models.Conversation).where(models.Conversation.business_id == owner.business_id)
-                         .order_by(models.Conversation.id.desc()).limit(limit)).all()
-        out = []
-        for c in rows:
-            said = [m for m in c.messages if m.role == "customer"]
-            if not said:
-                continue
-            out.append({"id": c.id, "started": _dt(c.started_at), "channel": c.channel, "caller": c.caller_phone,
-                        "outcome": c.outcome, "handoff": c.handoff, "turns": len(said), "first": said[0].text[:120]})
-        return out
+        said = (select(M.conversation_id, func.count(M.id).label("turns"), func.min(M.id).label("first_id"))
+                .where(M.role == "customer", M.conversation_id.in_(
+                    select(C.id).where(C.business_id == owner.business_id)))
+                .group_by(M.conversation_id).subquery())
+        rows = s.execute(select(C, said.c.turns, M.text).join(said, said.c.conversation_id == C.id)
+                         .join(M, M.id == said.c.first_id).where(C.business_id == owner.business_id)
+                         .order_by(C.id.desc()).limit(max(1, min(limit, 200)))).all()
+        return [{"id": c.id, "started": _dt(c.started_at), "channel": c.channel, "caller": c.caller_phone,
+                 "outcome": c.outcome, "handoff": c.handoff, "turns": turns, "first": first[:120]}
+                for c, turns, first in rows]
 
 
 @router.get("/conversations/{cid}")
@@ -330,6 +346,9 @@ def put_business(body: dict, owner: Owner = Depends(current_owner)):
                 v = normalise_phone(v)
             if k == "speech_speed":
                 v = min(1.15, max(0.85, float(v or 1.0)))
+            if k == "assistant_name" and v:
+                v = str(v).strip()[:40]
+                v = v[:1].upper() + v[1:]  # "riya" -> "Riya": it's spoken and shown to customers
             if k == "skills":
                 v = ",".join(x for x in (v if isinstance(v, list) else str(v).split(",")) if x in REGISTRY)
             setattr(biz, k, v or None if k not in ("name", "skills", "languages") else v)
@@ -552,7 +571,9 @@ def change_password(body: PasswordChange, request: Request, owner: Owner = Depen
     if len(body.new) < 8:
         raise HTTPException(400, "New password needs at least 8 characters")
     with db.session() as s:
-        user = s.get(models.OwnerUser, owner.user_id)
+        user = s.get(models.OwnerUser, owner.user_id) if owner.user_id else None
+        if not user:
+            raise HTTPException(400, "Only the shop owner can change their password.")
         if not auth.verify_password(body.current, user.password_hash):
             raise HTTPException(400, "Current password is wrong")
         user.password_hash = auth.hash_password(body.new)

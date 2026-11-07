@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { API, api } from "../../../lib/api";
 import { useMe } from "../../../lib/Shell";
+import { PageHead } from "../../../lib/ui";
 
 function Copy({ text, label = "Copy" }) {
   const [done, setDone] = useState(false);
@@ -45,8 +46,7 @@ export default function Share() {
         .poster img { width: 260px; height: 260px; }
         .poster .small { color: #35524f; }
       `}</style>
-      <h1>Share kit</h1>
-      <p className="sub">Put {name} wherever your customers already are. Each of these takes under a minute.</p>
+      <PageHead title="Share kit" sub={`Put ${name} wherever your customers already are. Each of these takes under a minute.`} />
 
       <div className="split" style={{ gridTemplateColumns: "1fr 440px", alignItems: "start" }}>
         <div>
@@ -65,6 +65,11 @@ export default function Share() {
 
           <div className="card" style={{ marginTop: 12 }}>
             <h2 style={{ marginTop: 0 }}>3. WhatsApp, Instagram, Google</h2>
+            {me.business.whatsapp_link && (<>
+              <p className="small">Your customers can WhatsApp {name} here (it opens with your shop code <b>{me.business.code}</b>):</p>
+              <div className="row" style={{ flexWrap: "nowrap", marginBottom: 10 }}><input readOnly value={me.business.whatsapp_link} />
+                <Copy text={me.business.whatsapp_link} /></div>
+            </>)}
             <div className="row">
               <a className="btn ghost small" target="_blank" href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}>Share on WhatsApp</a>
               <Copy text={shareText} label="Copy message" />

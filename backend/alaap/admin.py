@@ -6,6 +6,7 @@
   python -m alaap.admin set-plan SLUG PLAN [DAYS]     # e.g. comp a founding customer: set-plan glow-salon pro 365
   python -m alaap.admin deactivate SLUG               # stop a business answering (keeps its data)
   python -m alaap.admin seed-demo                     # add the three demo businesses
+  python -m alaap.admin create-operator EMAIL [NAME]  # an Alaap team login for the operator console (/ops)
 """
 
 import secrets
@@ -58,6 +59,16 @@ def main(argv: list[str]) -> int:
                 return 1
             biz.active = False
             print(f"{biz.slug} deactivated")
+        elif cmd == "create-operator" and args:
+            email = args[0].lower().strip()
+            op = s.scalar(select(models.Operator).where(models.Operator.email == email))
+            password = secrets.token_urlsafe(12)
+            if op:
+                op.password_hash = auth.hash_password(password)
+            else:
+                s.add(models.Operator(email=email, name=" ".join(args[1:]) or None,
+                                      password_hash=auth.hash_password(password)))
+            print(f"Operator {email} password: {password}  (sign in at {config.DASHBOARD_URL}/ops)")
         elif cmd == "seed-demo":
             from . import seed
 

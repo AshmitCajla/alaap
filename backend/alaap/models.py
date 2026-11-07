@@ -39,6 +39,11 @@ class Business(Base):
     paid_until: Mapped[datetime | None] = mapped_column(DateTime)
     whatsapp_phone_number_id: Mapped[str | None] = mapped_column(String(50), unique=True)
     exotel_number: Mapped[str | None] = mapped_column(String(20), unique=True)
+    # Managed by the Alaap team: we hold the number and do the setup; the owner just sends their menu.
+    managed: Mapped[bool | None] = mapped_column(Boolean, default=False)
+    code: Mapped[str | None] = mapped_column(String(12), unique=True)  # shop code on Alaap's shared WhatsApp
+    stage: Mapped[str | None] = mapped_column(String(20), default="live")  # setup | review | live
+    ops_notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -321,3 +326,40 @@ class PlanPayment(Base):
     status: Mapped[str] = mapped_column(String(20), default="created")  # created | paid
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class Operator(Base):
+    """An Alaap team member (operator console). Not tied to a business."""
+    __tablename__ = "operator"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(200), unique=True)
+    name: Mapped[str | None] = mapped_column(String(100))
+    password_hash: Mapped[str] = mapped_column(String(300))
+
+
+class PhoneNumber(Base):
+    """A phone number Alaap rents (Exotel ExoPhone) and lends to a business."""
+    __tablename__ = "phone_number"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)  # 10 digits (landline numbers: with STD code)
+    provider: Mapped[str] = mapped_column(String(20), default="exotel")
+    business_id: Mapped[int | None] = mapped_column(ForeignKey("business.id"))
+    monthly_cost_inr: Mapped[int] = mapped_column(Integer, default=0)
+    notes: Mapped[str | None] = mapped_column(String(200))
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Intake(Base):
+    """Something a shop sent us to set up from (menu photo, price list text), or a shop asking to join."""
+    __tablename__ = "intake"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int | None] = mapped_column(ForeignKey("business.id"))  # None = a new shop wanting Alaap
+    from_phone: Mapped[str | None] = mapped_column(String(20))
+    source: Mapped[str] = mapped_column(String(20), default="whatsapp")  # whatsapp | console
+    kind: Mapped[str] = mapped_column(String(20))  # text | photo | join
+    text: Mapped[str | None] = mapped_column(Text)
+    media_path: Mapped[str | None] = mapped_column(Text)
+    extracted: Mapped[str | None] = mapped_column(Text)  # JSON from onboarding.extract, ready to review
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new | applied | done | discarded
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

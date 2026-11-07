@@ -39,3 +39,14 @@ def read_token(token: str) -> dict | None:
         return jwt.decode(token, config.SECRET_KEY, algorithms=["HS256"])
     except jwt.PyJWTError:
         return None
+
+
+def make_operator_token(operator_id: int) -> str:
+    payload = {"sub": str(operator_id), "op": True, "exp": int(time.time()) + 7 * 86400}
+    return jwt.encode(payload, config.SECRET_KEY, algorithm="HS256")
+
+
+def make_support_token(operator_id: int, business_id: int) -> str:
+    """An operator working inside a shop's dashboard (short-lived; marked so it can't change the owner's password)."""
+    payload = {"sub": "0", "biz": business_id, "via_op": operator_id, "exp": int(time.time()) + 8 * 3600}
+    return jwt.encode(payload, config.SECRET_KEY, algorithm="HS256")

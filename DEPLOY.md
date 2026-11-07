@@ -40,7 +40,31 @@ https, or webhooks can't be verified — `docker compose logs api` shows why.
 
 After editing `.env`: `docker compose up -d` (only the changed services restart).
 
-## 4. Going from free to paid
+## 4. Managed mode: Alaap runs everything, the shop just sends its menu
+
+The team console is at `https://app.yourdomain.in/ops`. Make a team login once:
+`docker compose exec api python -m alaap.admin create-operator you@alaap.in "Your name"`.
+
+**One-time setup**
+- **Numbers:** rent ExoPhones on Alaap's Exotel account. Point *every* number at **one** flow: a Voicebot applet with
+  `wss://api.yourdomain.in/ws/exotel?token=<EXOTEL_WS_TOKEN>` (no `biz=`; Alaap finds the shop from the number dialled),
+  then a Connect applet to the owner. Add the numbers under **Numbers** (or set `EXOTEL_SID/API_KEY/API_TOKEN` and press
+  *Sync from Exotel*).
+- **Shared WhatsApp:** connect one Alaap WhatsApp number (same Meta app and webhook as above) and set
+  `WHATSAPP_SHARED_NUMBER_ID` and `WHATSAPP_SHARED_NUMBER`. Every shop gets a code (GLOW, KAUR…); its QR poster opens
+  `wa.me/<number>?text=<CODE>`. Customers who message without a code are asked for one; shops can reply JOIN.
+
+**Per shop (about 10 minutes)**
+1. *Shops → Add shop*: name, type, owner's mobile. It gets a code and the next free number.
+2. Owner sends a photo of the rate card / menu to Alaap's WhatsApp (it lands in **Inbox**, already read by the AI), or
+   paste it / upload it on the shop page. Fix anything wrong in the review table and save.
+3. *Test call / chat*, then **Go live**: the owner gets a WhatsApp with their number, the call-forwarding codes and
+   how to change prices by just messaging.
+4. **Usage & cost** shows each shop's call minutes, messages, number rent and margin against its plan.
+
+Owners never need a login; *Open shop dashboard* lets the team work inside any shop's dashboard.
+
+## 5. Going from free to paid
 
 Nothing in the code changes. Edit `.env`, then `docker compose up -d`:
 
@@ -54,7 +78,7 @@ Nothing in the code changes. Edit `.env`, then `docker compose up -d`:
 To charge businesses strictly, set `ENFORCE_BILLING=1` (lapsed businesses stop answering customers with a polite
 notice and see a renew banner). Trial length is `TRIAL_DAYS`.
 
-## 5. Operating it
+## 6. Operating it
 
 ```bash
 docker compose ps                                    # everything healthy?

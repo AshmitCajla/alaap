@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { API, api } from "../../../lib/api";
 import { useMe } from "../../../lib/Shell";
+import { PageHead, Skeleton, useToast } from "../../../lib/ui";
 import VoicePicker from "../../../lib/VoicePicker";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -12,10 +13,10 @@ function AccountTab() {
   const [pw, setPw] = useState({ current: "", new: "" });
   const [msg, setMsg] = useState(null);
   const change = () => api("/api/me/password", { method: "PUT", body: pw })
-    .then(() => { setMsg("Password changed ✓"); setPw({ current: "", new: "" }); }).catch((e) => setMsg(e.message));
+    .then(() => { setMsg("Password changed"); setPw({ current: "", new: "" }); }).catch((e) => setMsg(e.message));
   const wipe = () => {
     if (!confirm("Delete every call and chat transcript for your business? Bookings and orders stay. This can't be undone.")) return;
-    api("/api/data/conversations", { method: "DELETE" }).then((r) => setMsg(`Deleted ${r.deleted} conversations ✓`)).catch((e) => setMsg(e.message));
+    api("/api/data/conversations", { method: "DELETE" }).then((r) => setMsg(`Deleted ${r.deleted} conversations`)).catch((e) => setMsg(e.message));
   };
   return (
     <div className="card" style={{ maxWidth: 640 }}>
@@ -47,16 +48,14 @@ export default function Settings() {
   const me = useMe();
   const [s, setS] = useState(null);
   const [tab, setTab] = useState("Business");
-  const [msg, setMsg] = useState(null);
+  const toast = useToast();
 
   useEffect(() => { api("/api/settings").then(setS); }, []);
-  if (!s) return <div className="muted">Loading…</div>;
+  if (!s) return <Skeleton rows={3} height={90} />;
 
   const save = async (path, body) => {
-    setMsg("Saving…");
-    try { setS(await api(path, { method: "PUT", body })); setMsg("Saved ✓"); }
-    catch (e) { setMsg("Error: " + e.message); }
-    setTimeout(() => setMsg(null), 2500);
+    try { setS(await api(path, { method: "PUT", body })); toast("Saved — your assistant uses this right away"); }
+    catch (e) { toast(e.message, "bad"); }
   };
   const b = s.business;
   const setB = (k) => (e) => setS({ ...s, business: { ...b, [k]: e.target.value } });
@@ -66,10 +65,10 @@ export default function Settings() {
 
   return (
     <>
-      <h1>Settings</h1>
-      <p className="sub">Alaap answers only from what's here, so keep prices and hours up to date.</p>
-      <div className="tabs">{TABS.map((t) => <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t}</button>)}</div>
-      {msg && <div className="pill" style={{ marginBottom: 12 }}>{msg}</div>}
+      <PageHead title="Settings" sub="Your assistant answers only from what's here, so keep prices and hours up to date." />
+      <div style={{ overflowX: "auto", marginBottom: 6 }}>
+        <div className="seg" style={{ flexWrap: "nowrap" }}>{TABS.map((t) => <button key={t} className={"nowrap" + (tab === t ? " on" : "")} onClick={() => setTab(t)}>{t}</button>)}</div>
+      </div>
 
       {tab === "Business" && (
         <div className="card" style={{ maxWidth: 640 }}>

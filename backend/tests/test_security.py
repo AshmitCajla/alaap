@@ -13,7 +13,7 @@ from alaap.state import MemoryStore
 from datetime import datetime
 
 NOW = datetime(2026, 11, 10, 9, 0)
-PUBLIC = {"/health", "/api/auth/login", "/api/auth/signup", "/widget.js", "/", "/pay/done"}
+PUBLIC = {"/health", "/api/auth/login", "/api/ops/auth/login", "/api/auth/signup", "/widget.js", "/", "/pay/done"}
 PUBLIC_PREFIX = ("/api/public/", "/api/chat/", "/demo/", "/c/", "/pay/mock/", "/webhooks/", "/ws/", "/docs", "/openapi",
                  "/redoc")
 

@@ -55,7 +55,8 @@ def health():
 def public_info(slug: str):
     biz = _business(slug)
     return {"slug": biz.slug, "name": biz.name, "kind": biz.kind, "city": biz.city,
-            "voice": bool(speech.provider()), "assistant": assistant_name(biz), "female": is_female(biz)}
+            "voice": bool(speech.provider()), "assistant": assistant_name(biz), "female": is_female(biz),
+            "skills": biz.skill_list()}
 
 
 class StartChat(BaseModel):
@@ -135,8 +136,10 @@ async def exotel_call(ws: WebSocket, biz: str | None = None):
     if not config.EXOTEL_WS_TOKEN or not hmac.compare_digest(token, config.EXOTEL_WS_TOKEN):
         await ws.close(code=1008, reason="bad token")  # only Exotel knows the token, so caller ID can be trusted
         return
+    # One Exotel flow can serve every shop: without ?biz=, the shop is found from the number dialled
+    # (Exotel's `start` event carries it), so Alaap-managed numbers need no per-shop setup.
     biz_id = business_for_call(biz, ws.query_params.get("to"))
-    if not biz_id:
+    if biz and not biz_id:
         await ws.close(code=1008)
         return
     await CallSession(ws, biz_id, trust_caller_id=True).run()

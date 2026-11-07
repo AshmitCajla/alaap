@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
 from .. import config, db, jobs
-from . import owner, public, webhooks
+from . import ops, owner, public, webhooks
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 STATIC = Path(__file__).resolve().parent.parent / "static"
@@ -58,11 +58,14 @@ async def security_headers(request, call_next):
 app.include_router(public.router)
 app.include_router(webhooks.router)
 app.include_router(owner.router)
+app.include_router(ops.router)
 
 
 @app.get("/widget.js")
 def widget_js():
-    return FileResponse(STATIC / "widget.js", media_type="application/javascript")
+    # Embedded on shops' own websites: let browsers re-check every few minutes so updates reach everyone.
+    return FileResponse(STATIC / "widget.js", media_type="application/javascript",
+                        headers={"Cache-Control": "public, max-age=300, must-revalidate"})
 
 
 @app.get("/demo/{slug}", response_class=HTMLResponse)

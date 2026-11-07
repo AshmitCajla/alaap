@@ -14,14 +14,16 @@ DONE = {"booked", "rescheduled", "cancelled", "ordered", "lead", "callback", "co
 def overview(s, biz: models.Business, days: int = 7) -> dict:
     t = now(biz.timezone)
     since = datetime.combine((t - timedelta(days=days - 1)).date(), datetime.min.time())
-    convs = s.scalars(select(models.Conversation).where(
-        models.Conversation.business_id == biz.id, models.Conversation.is_owner.is_(False),
-        models.Conversation.started_at >= since)).all()
-    talked = [c for c in convs if any(m.role == "customer" for m in c.messages)]
+    C, M = models.Conversation, models.Message
+    # Only plain columns, and "the customer said something" as an EXISTS: no per-conversation message loading.
+    spoke = select(M.id).where(M.conversation_id == C.id, M.role == "customer").exists()
+    talked = s.execute(select(C.id, C.channel, C.outcome, C.handoff, C.errors, C.started_at).where(
+        C.business_id == biz.id, C.is_owner.is_(False), C.started_at >= since, spoke)).all()
     # A conversation counts as completed if a skill finished something, or it ended without errors or handoff
     # (an enquiry that was answered).
     completed = [c for c in talked if c.outcome in DONE or (not c.handoff and c.errors == 0)]
-    latencies = sorted(m.latency_ms for c in talked for m in c.messages if m.latency_ms is not None)
+    latencies = sorted(s.scalars(select(M.latency_ms).join(C, C.id == M.conversation_id).where(
+        C.business_id == biz.id, C.is_owner.is_(False), C.started_at >= since, M.latency_ms.is_not(None))).all())
     p95 = latencies[int(0.95 * (len(latencies) - 1))] if latencies else None
 
     def count(model, col, *where):
