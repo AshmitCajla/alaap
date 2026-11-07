@@ -263,6 +263,7 @@ class Conversation(Base):
     business_id: Mapped[int] = mapped_column(ForeignKey("business.id"))
     channel: Mapped[str] = mapped_column(String(20))  # phone | whatsapp | web | owner
     caller_phone: Mapped[str | None] = mapped_column(String(20))
+    phone_verified: Mapped[bool | None] = mapped_column(Boolean, default=False)  # real caller ID, not typed
     is_owner: Mapped[bool] = mapped_column(Boolean, default=False)
     outcome: Mapped[str | None] = mapped_column(String(30))
     # booked | rescheduled | cancelled | ordered | lead | callback | complaint | answered

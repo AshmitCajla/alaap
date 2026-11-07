@@ -9,8 +9,8 @@ from sqlalchemy import select
 from .. import models, notify, payments
 from ..scheduling import hours_on, parse_date
 from ..timeutil import WEEKDAYS, now
-from .base import (READBACK_NEXT, Context, Skill, Tool, ToolError, business, new_ref, phone_or_caller, stash,
-                   upsert_customer)
+from .base import (READBACK_NEXT, UNVERIFIED_NOTE, Context, Skill, Tool, ToolError, business, may_access, new_ref,
+                   phone_or_caller, stash, upsert_customer)
 
 log = logging.getLogger("alaap.orders")
 
@@ -124,8 +124,13 @@ def prepare_order(ctx, s, items, customer_name, address, pincode, slot_date, slo
 
 def do_order(ctx: Context, s, a: dict) -> dict:
     biz = business(s, ctx)
+    # Lock the products (Postgres row locks) and re-read stock, so simultaneous orders can't oversell.
+    ids = sorted({l["product_id"] for l in a["lines"]})
+    locked = {p.id: p for p in s.scalars(select(models.Product).where(models.Product.id.in_(ids))
+                                         .order_by(models.Product.id).with_for_update()
+                                         .execution_options(populate_existing=True))}
     for l in a["lines"]:  # stock may have changed since the read-back
-        p = s.get(models.Product, l["product_id"])
+        p = locked[l["product_id"]]
         if p.stock is not None:
             if p.stock < l["qty"]:
                 raise ToolError(f"{p.name} just went out of stock ({p.stock} left). Tell the customer.")
@@ -170,16 +175,13 @@ def _orders_for(s, ctx, order_ref=None, phone=None):
     q = select(models.Order).where(models.Order.business_id == ctx.business_id)
     if order_ref:
         q = q.where(models.Order.ref == str(order_ref).strip())
+    elif ctx.phone_verified or ctx.is_owner:
+        q = q.join(models.Customer).where(models.Customer.phone == phone_or_caller(ctx, None if ctx.phone_verified else phone))
     else:
-        q = q.join(models.Customer).where(models.Customer.phone == phone_or_caller(ctx, phone))
-    found = s.scalars(q.order_by(models.Order.id.desc()).limit(3)).all()
+        q = q.where(models.Order.conversation_id == ctx.conversation_id)
+    found = [o for o in s.scalars(q.order_by(models.Order.id.desc()).limit(5)) if may_access(ctx, o)][:3]
     if not found:
-        raise ToolError("No order found. Ask for the order number or the phone number used.")
-    if order_ref and not ctx.is_owner:
-        caller = phone_or_caller(ctx, phone)
-        found = [o for o in found if o.customer.phone == caller]
-        if not found:
-            raise ToolError("That order number doesn't match this phone number.")
+        raise ToolError("No order found that this caller can see. " + ("" if ctx.phone_verified else UNVERIFIED_NOTE))
     return found
 
 
@@ -219,7 +221,8 @@ def do_cancel_order(ctx, s, a):
     o = s.get(models.Order, a["order_id"])
     o.status, o.updated_at = "cancelled", ctx.now()
     for i in o.items:
-        p = s.get(models.Product, i.product_id)
+        p = s.scalar(select(models.Product).where(models.Product.id == i.product_id).with_for_update()
+                     .execution_options(populate_existing=True))
         if p and p.stock is not None:
             p.stock += i.qty
     biz = business(s, ctx)

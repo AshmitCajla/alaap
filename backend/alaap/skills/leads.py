@@ -21,14 +21,24 @@ def save_lead(ctx, s, need, name=None, phone=None, budget=None, location=None, p
     p = normalise_phone(phone) or normalise_phone(ctx.caller_phone)
     if not p:
         raise ToolError("Need a 10-digit mobile number for the lead. Ask for it.")
-    lead = models.Lead(business_id=ctx.business_id, name=name, phone=p, need=need, budget=budget,
-                       location=location, preferred_time=preferred_time, conversation_id=ctx.conversation_id,
-                       created_at=ctx.now())
+    from sqlalchemy import select
+
+    # One lead per conversation: later calls fill in details instead of creating duplicates.
+    lead = s.scalar(select(models.Lead).where(models.Lead.business_id == ctx.business_id,
+                                              models.Lead.conversation_id == ctx.conversation_id))
+    was_hot = bool(lead and lead.score >= 70)
+    if lead is None:
+        lead = models.Lead(business_id=ctx.business_id, phone=p, need=need, conversation_id=ctx.conversation_id,
+                           created_at=ctx.now())
+        s.add(lead)
+    for field, value in (("name", name), ("phone", p), ("need", need), ("budget", budget), ("location", location),
+                         ("preferred_time", preferred_time)):
+        if value:
+            setattr(lead, field, value)
     lead.score = score(lead)
-    s.add(lead)
     s.flush()
     biz = business(s, ctx)
-    if lead.score >= 70:
+    if lead.score >= 70 and not was_hot:
         notify.owner_alert(s, biz, f"Hot lead ({lead.score}/100): {name or 'someone'} {p}: {need}. "
                                    f"Budget {budget or '-'}, {location or '-'}, wants {preferred_time or '-'}.")
     ctx.outcome = ctx.outcome or "lead"

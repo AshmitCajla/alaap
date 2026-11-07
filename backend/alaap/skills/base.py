@@ -25,6 +25,9 @@ class Context:
     tz: str = "Asia/Kolkata"
     channel: str = "web"
     caller_phone: str | None = None
+    # True only when the number came from real caller ID (phone call via Exotel, WhatsApp). A number typed in
+    # web chat or said on a browser call is not proof of who someone is.
+    phone_verified: bool = False
     is_owner: bool = False
     user_turn: int = 0                 # customer messages so far
     pending: dict[str, dict] = field(default_factory=dict)
@@ -138,3 +141,16 @@ def stash(ctx: Context, kind: str, payload: dict) -> str:
 
 READBACK_NEXT = ("Read this back to the customer in their language and ask them to confirm. "
                  "Call confirm_action only after they clearly say yes.")
+
+
+UNVERIFIED_NOTE = ("PRIVACY: you could NOT check this number because it was typed, not verified. Do not say there are "
+                   "no bookings. Tell the customer: for their privacy, bookings and orders can only be checked or changed "
+                   "when they call or WhatsApp from the number they booked with.")
+
+
+def may_access(ctx: Context, record) -> bool:
+    """Whether this caller may see or change a booking/order: the owner, the verified number it belongs to,
+    or anyone in the same conversation that created it."""
+    if ctx.is_owner or record.conversation_id == ctx.conversation_id:
+        return True
+    return ctx.phone_verified and record.customer.phone == normalise_phone(ctx.caller_phone)

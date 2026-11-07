@@ -68,6 +68,8 @@ EXOTEL_SID = env("EXOTEL_SID")
 EXOTEL_API_KEY = env("EXOTEL_API_KEY")
 EXOTEL_API_TOKEN = env("EXOTEL_API_TOKEN")
 EXOTEL_SUBDOMAIN = env("EXOTEL_SUBDOMAIN", "api.exotel.com")
+# Secret in the Voicebot URL (…/ws/exotel?biz=SLUG&token=THIS). Phone calls are refused without it.
+EXOTEL_WS_TOKEN = env("EXOTEL_WS_TOKEN")
 
 # Who may call the API from a browser. The widget/customer endpoints are public by design.
 CORS_ORIGINS = [o.strip() for o in env("CORS_ORIGINS", "*").split(",") if o.strip()]
@@ -124,6 +126,8 @@ def check() -> list[str]:
         warn.append("WHATSAPP_TOKEN not set: WhatsApp messages stay in the dashboard outbox.")
     elif not WHATSAPP_TEMPLATE_NAME:
         warn.append("WHATSAPP_TEMPLATE_NAME not set: reminders outside the 24-hour window will fail.")
+    if not EXOTEL_WS_TOKEN:
+        warn.append("EXOTEL_WS_TOKEN not set: phone calls via Exotel are refused until you set it.")
     if not RAZORPAY_KEY_ID:
         warn.append("Razorpay keys not set: UPI links use a test page" + (" (disabled in production)." if PRODUCTION else "."))
     return [f"FATAL: {m}" for m in fatal] + [f"warning: {m}" for m in warn]

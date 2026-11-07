@@ -118,9 +118,11 @@ class Endpointer:
 
 
 class CallSession:
-    def __init__(self, ws: WebSocket, business_id: int):
+    def __init__(self, ws: WebSocket, business_id: int, trust_caller_id: bool = False):
         self.ws = ws
         self.business_id = business_id
+        # Only Exotel (authenticated by EXOTEL_WS_TOKEN) supplies a real caller number. A browser could claim anything.
+        self.trust_caller_id = trust_caller_id
         self.rate = 8000
         self.stream_sid: str | None = None
         self.conversation_id: int | None = None
@@ -380,7 +382,7 @@ class CallSession:
         self.stream_sid = event.get("stream_sid") or start.get("stream_sid")
         self.rate = int(start.get("media_format", {}).get("sample_rate", 8000))
         self.endpointer = Endpointer(self.rate)
-        caller = start.get("from") or start.get("custom_parameters", {}).get("from")
+        caller = (start.get("from") or start.get("custom_parameters", {}).get("from")) if self.trust_caller_id else None
         keyterms = []
         with db.session() as s:
             biz = s.get(models.Business, self.business_id)
@@ -398,7 +400,8 @@ class CallSession:
         except Exception as e:
             log.warning("STT streaming unavailable (%s); using local endpointing", e)
             self.stt = None
-        hello = await asyncio.to_thread(get_engine().start, self.business_id, "phone", caller)
+        hello = await asyncio.to_thread(get_engine().start, self.business_id, "phone", caller, False,
+                                        bool(caller and self.trust_caller_id))
         self.conversation_id = hello.conversation_id
         await self._send({"event": "conversation", "id": self.conversation_id})
         self.speaker_task = asyncio.create_task(self._speaker())

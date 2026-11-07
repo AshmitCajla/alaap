@@ -24,8 +24,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .side .spacer { flex: 1; }
 .main { padding: 24px 28px; max-width: 1200px; width: 100%; }
 @media (max-width: 760px) {
-  .shell { grid-template-columns: 1fr; }
-  .side { flex-direction: row; overflow-x: auto; padding: 10px; gap: 4px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-content: start; }
+  .side { flex-direction: row; overflow-x: auto; padding: 8px 10px; gap: 4px; border-right: 0; border-bottom: 1px solid var(--line);
+          position: sticky; top: 0; z-index: 5; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .side::-webkit-scrollbar { display: none; }
+  .side a { padding: 7px 12px; border-radius: 99px; font-size: 14px; }
+  h1 { font-size: 20px; }
+  .kpi .value { font-size: 24px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .side .brand, .side .biz, .side .spacer { display: none; }
   .side a { white-space: nowrap; }
   .main { padding: 16px; }

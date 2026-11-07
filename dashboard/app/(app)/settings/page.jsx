@@ -192,7 +192,7 @@ export default function Settings() {
           <h2>Phone (Exotel)</h2>
           <label>Your Exotel number (10 digits)<input value={b.exotel_number || ""} onChange={setB("exotel_number")} /></label>
           <p className="small muted">In Exotel App Bazaar add a <b>Voicebot</b> applet with URL
-            <code>{API.replace(/^http/, "ws")}/ws/exotel?biz={b.slug}</code>, then a <b>Connect</b> applet to your mobile so
+            <code>{API.replace(/^http/, "ws")}/ws/exotel?biz={b.slug}&amp;token=…</code> (the token is EXOTEL_WS_TOKEN from your server's .env), then a <b>Connect</b> applet to your mobile so
             urgent calls reach you. Forward missed calls from your shop number to the Exotel number.</p>
           <button className="btn" onClick={() => save("/api/settings/business", b)}>Save</button>
         </div>

@@ -160,7 +160,7 @@ def update_order_status(ctx, s, order_ref, status, note=None):
 
 
 def set_stock(ctx, s, product_id, stock):
-    p = s.get(models.Product, int(product_id))
+    p = s.scalar(select(models.Product).where(models.Product.id == int(product_id)).with_for_update())
     if not p or p.business_id != ctx.business_id:
         raise ToolError(f"No product {product_id}.")
     p.stock = None if stock is None or int(stock) < 0 else int(stock)

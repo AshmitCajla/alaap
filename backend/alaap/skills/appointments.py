@@ -4,18 +4,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models, notify
-from ..scheduling import check_booking, free_slots, parse_date, parse_dt
+from ..scheduling import check_booking, free_slots, lock_staff_for, parse_date, parse_dt
 from ..timeutil import FMT, speakable
-from .base import (READBACK_NEXT, Context, Skill, Tool, ToolError, business, phone_or_caller, stash,
-                   upsert_customer, new_ref)
+from .base import (READBACK_NEXT, UNVERIFIED_NOTE, Context, Skill, Tool, ToolError, business, may_access,
+                   normalise_phone, phone_or_caller, stash, upsert_customer, new_ref)
 
 
 def _owned(s: Session, ctx: Context, ref: str, phone: str | None) -> models.Appointment:
-    p = phone_or_caller(ctx, phone)
     appt = s.scalar(select(models.Appointment).where(models.Appointment.ref == str(ref).strip(),
                                                      models.Appointment.business_id == ctx.business_id))
-    if not appt or (appt.customer.phone != p and not ctx.is_owner):
-        raise ToolError(f"No booking {ref} found for that phone number. Use find_my_appointments.")
+    if not appt or not may_access(ctx, appt):
+        raise ToolError(f"No booking {ref} that this caller can change. " + ("" if ctx.phone_verified else UNVERIFIED_NOTE))
     if appt.status != "booked":
         raise ToolError(f"Booking {ref} is already {appt.status}.")
     return appt
@@ -26,13 +25,20 @@ def find_free_slots(ctx, s, service_id, date, staff_id=None, after=None, before=
 
 
 def find_my_appointments(ctx, s, phone=None):
-    p = phone_or_caller(ctx, phone)
-    rows = s.scalars(select(models.Appointment).join(models.Customer)
-                     .where(models.Appointment.business_id == ctx.business_id, models.Customer.phone == p,
-                            models.Appointment.status == "booked", models.Appointment.start_at >= ctx.now())
-                     .order_by(models.Appointment.start_at))
-    return {"phone": p, "upcoming": [{"ref": a.ref, "start": a.start_at.strftime(FMT), "service": a.service.name,
-                                      "staff": a.staff.name} for a in rows]}
+    q = select(models.Appointment).join(models.Customer).where(
+        models.Appointment.business_id == ctx.business_id, models.Appointment.status == "booked",
+        models.Appointment.start_at >= ctx.now())
+    if ctx.phone_verified or ctx.is_owner:
+        p = normalise_phone(ctx.caller_phone) if ctx.phone_verified and not ctx.is_owner else phone_or_caller(ctx, phone)
+        q = q.where(models.Customer.phone == p)
+    else:  # typed number: only what was booked in this conversation
+        q = q.where(models.Appointment.conversation_id == ctx.conversation_id)
+    rows = s.scalars(q.order_by(models.Appointment.start_at)).all()
+    out = {"upcoming": [{"ref": a.ref, "start": a.start_at.strftime(FMT), "service": a.service.name,
+                         "staff": a.staff.name} for a in rows]}
+    if not ctx.phone_verified and not ctx.is_owner:
+        out["note"] = UNVERIFIED_NOTE
+    return out
 
 
 def prepare_booking(ctx, s, customer_name, service_id, start, customer_phone=None, staff_id=None):
@@ -84,6 +90,7 @@ def prepare_cancellation(ctx, s, appointment_ref, phone=None):
 
 def do_book(ctx: Context, s: Session, a: dict) -> dict:
     biz = business(s, ctx)
+    lock_staff_for(s, biz, a["service_id"])  # serialise confirmations for these staff
     at = parse_dt(a["start"])
     # Check again: the slot may have gone while the customer was deciding.
     svc, person, end = check_booking(s, biz, a["service_id"], a["staff_id"], at)
@@ -103,6 +110,7 @@ def do_book(ctx: Context, s: Session, a: dict) -> dict:
 def do_reschedule(ctx: Context, s: Session, a: dict) -> dict:
     biz = business(s, ctx)
     appt = s.get(models.Appointment, a["appointment_id"])
+    lock_staff_for(s, biz, appt.service_id)
     at = parse_dt(a["start"])
     _, person, end = check_booking(s, biz, appt.service_id, a["staff_id"], at, ignore=appt.id)
     appt.start_at, appt.end_at, appt.staff_id, appt.updated_at = at, end, person.id, ctx.now()

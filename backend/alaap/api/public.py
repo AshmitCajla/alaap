@@ -127,13 +127,19 @@ async def browser_call(ws: WebSocket, slug: str):
 
 @router.websocket("/ws/exotel")
 async def exotel_call(ws: WebSocket, biz: str | None = None):
-    """Exotel Voicebot applet URL: wss://<host>/ws/exotel?biz=<slug>"""
+    """Exotel Voicebot applet URL: wss://<host>/ws/exotel?biz=<slug>&token=<EXOTEL_WS_TOKEN>"""
+    import hmac
+
     await ws.accept()
+    token = ws.query_params.get("token") or ""
+    if not config.EXOTEL_WS_TOKEN or not hmac.compare_digest(token, config.EXOTEL_WS_TOKEN):
+        await ws.close(code=1008, reason="bad token")  # only Exotel knows the token, so caller ID can be trusted
+        return
     biz_id = business_for_call(biz, ws.query_params.get("to"))
     if not biz_id:
         await ws.close(code=1008)
         return
-    await CallSession(ws, biz_id).run()
+    await CallSession(ws, biz_id, trust_caller_id=True).run()
 
 
 # ---------- payments ----------

@@ -109,7 +109,7 @@ def _conversation_for(biz: models.Business, phone: str, owner: bool) -> int:
             from ..timeutil import now
             if conv and not conv.ended_at and (now(biz.timezone) - conv.last_at).total_seconds() < IDLE_MINUTES * 60:
                 return cid
-    cid = get_engine().start(biz.id, "whatsapp", phone, owner=owner).conversation_id
+    cid = get_engine().start(biz.id, "whatsapp", phone, owner=owner, verified=True).conversation_id
     st.set(key, {"conversation_id": cid})
     return cid
 

@@ -227,23 +227,25 @@ class Engine:
     # ---------- lifecycle ----------
 
     def start(self, business_id: int, channel: str = "web", caller_phone: str | None = None,
-              owner: bool = False) -> Reply:
+              owner: bool = False, verified: bool = False) -> Reply:
+        """verified=True only when caller_phone comes from real caller ID (Exotel, WhatsApp)."""
         phone = normalise_phone(caller_phone)
         with db.session() as s:
             biz = s.get(models.Business, business_id)
             if not biz or not biz.active:
                 raise LookupError(f"No active business {business_id}")
             stamp = now(biz.timezone)
-            known = phone and not owner and s.scalar(select(models.Customer.name).where(
+            known = phone and verified and not owner and s.scalar(select(models.Customer.name).where(
                 models.Customer.business_id == biz.id, models.Customer.phone == phone))
             conv = models.Conversation(business_id=biz.id, channel="owner" if owner else channel,
-                                       caller_phone=phone, is_owner=owner, started_at=stamp, last_at=stamp)
+                                       caller_phone=phone, phone_verified=bool(phone and verified), is_owner=owner,
+                                       started_at=stamp, last_at=stamp)
             s.add(conv)
             s.flush()
             hello = greeting(biz, channel, owner, known or None)
             s.add(models.Message(conversation_id=conv.id, role="alaap", text=hello, created_at=stamp))
             ctx = Context(business_id=biz.id, conversation_id=conv.id, tz=biz.timezone, channel=channel,
-                          caller_phone=phone, is_owner=owner)
+                          caller_phone=phone, phone_verified=bool(phone and verified), is_owner=owner)
             cid = conv.id
         self.state.set(f"conv:{cid}", {"ctx": ctx.to_dict(), "messages": [{"role": "assistant", "content": hello}]})
         return Reply(hello, conversation_id=cid)
@@ -296,6 +298,13 @@ class Engine:
                 splitter = SentenceSplitter()
                 stream = (lambda chunk: [say(x) for x in splitter.feed(chunk)]) if on_sentence else None
                 msg = self.llm.chat([{"role": "system", "content": system}] + history, tools, on_text=stream)
+                if not msg.get("content") and not msg.get("tool_calls"):
+                    # Free-tier models occasionally return nothing; try once more, then another model.
+                    log.warning("empty LLM reply; retrying")
+                    msg = self.llm.chat([{"role": "system", "content": system}] + history, tools, on_text=stream)
+                    if not msg.get("content") and not msg.get("tool_calls") and len(self.llm.models) > 1:
+                        self.llm.model = next(m for m in self.llm.models if m != self.llm.model)
+                        msg = self.llm.chat([{"role": "system", "content": system}] + history, tools, on_text=stream)
                 history.append(msg)
                 if on_sentence:
                     for rest in splitter.flush():
@@ -329,7 +338,7 @@ class Engine:
 
         answer = " ".join(spoken).strip()
         if not answer:
-            say("Ji?") if not ctx.end_call else None
+            say("Maaf kijiye, ek baar phir se bataenge?") if not ctx.end_call else None
             answer = " ".join(spoken).strip()
         latency = int((time.perf_counter() - t0) * 1000)
         self._log(ctx, "alaap", answer or "(call ended)", latency)
@@ -361,9 +370,13 @@ class Engine:
             if any(sk.key == "appointments" for sk in active) and biz.staff:
                 parts.append("# Free time (staff: free windows; offer starts inside these, the booking must fit "
                              "before the window ends)\n" + free_time(s, biz, current))
-            caller = f"Caller's mobile (caller ID): {ctx.caller_phone}." if ctx.caller_phone else \
-                "Caller's mobile is unknown; ask for it when it's needed."
-            if ctx.caller_phone and not ctx.is_owner:
+            if ctx.caller_phone and ctx.phone_verified:
+                caller = f"Caller's mobile (verified caller ID): {ctx.caller_phone}."
+            elif ctx.caller_phone:
+                caller = f"Caller gave the mobile {ctx.caller_phone} (not verified; fine for new bookings)."
+            else:
+                caller = "Caller's mobile is unknown; ask for it when it's needed."
+            if ctx.caller_phone and ctx.phone_verified and not ctx.is_owner:
                 caller += " " + customer_memory(s, biz, ctx.caller_phone, current)
             parts.append(f"# This conversation\nNow: {current.strftime(FMT)} ({WEEKDAYS[current.weekday()]}). "
                          f"Channel: {ctx.channel}. {caller}")
@@ -434,7 +447,8 @@ class Engine:
             turns = sum(1 for m in conv.messages if m.role == "customer")
             ctx = Context(business_id=conv.business_id, conversation_id=conv.id, tz=biz.timezone,
                           channel="web" if conv.channel == "owner" else conv.channel,
-                          caller_phone=conv.caller_phone, is_owner=conv.is_owner, user_turn=turns,
+                          caller_phone=conv.caller_phone, phone_verified=bool(conv.phone_verified),
+                          is_owner=conv.is_owner, user_turn=turns,
                           outcome=conv.outcome, handoff=conv.handoff)
         return {"ctx": ctx.to_dict(), "messages": msgs}
 

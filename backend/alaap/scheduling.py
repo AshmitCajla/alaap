@@ -125,3 +125,11 @@ def check_booking(s: Session, biz: models.Business, service_id: int, staff_id: i
             return svc, p, end
     who = candidates[0].name if staff_id is not None else "No one"
     raise ToolError(f"{who} is not free at {start:%Y-%m-%d %H:%M}. Check free slots and offer another time.")
+
+
+def lock_staff_for(s: Session, biz: models.Business, service_id: int) -> None:
+    """Lock the staff who do this service (Postgres row locks, held until commit) so two simultaneous
+    confirmations can't both take the same free slot. Ordered by id to avoid deadlocks; no-op on SQLite."""
+    ids = select(models.staff_service.c.staff_id).where(models.staff_service.c.service_id == int(service_id))
+    s.execute(select(models.Staff.id).where(models.Staff.business_id == biz.id, models.Staff.id.in_(ids))
+              .order_by(models.Staff.id).with_for_update())

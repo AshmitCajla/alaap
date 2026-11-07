@@ -18,7 +18,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install -r requirements-dev.txt
-      - name: Tests (SQLite)
+      - name: Tests (SQLite + Postgres concurrency)
+        env: {TEST_POSTGRES_URL: "postgresql+psycopg://alaap:alaap@localhost:5432/alaap"}
         run: python -m pytest -q
       - name: Schema and demo data on Postgres
         env: {DATABASE_URL: "postgresql+psycopg://alaap:alaap@localhost:5432/alaap"}

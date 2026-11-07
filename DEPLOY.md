@@ -36,7 +36,7 @@ https, or webhooks can't be verified — `docker compose logs api` shows why.
 |---|---|---|
 | **Razorpay** (customer UPI links + your plan payments) | Razorpay Dashboard → Settings → API keys, and Webhooks | Keys in `.env`; webhook URL `https://api.yourdomain.in/webhooks/razorpay`, event `payment_link.paid`, secret = `RAZORPAY_WEBHOOK_SECRET` |
 | **WhatsApp** | Meta for Developers → your app → WhatsApp | `WHATSAPP_TOKEN` (permanent system-user token), `WHATSAPP_APP_SECRET`; webhook `https://api.yourdomain.in/webhooks/whatsapp`, verify token = `WHATSAPP_VERIFY_TOKEN`, subscribe to `messages`. Create a **Utility** template with body `Update from {{1}}: {{2}}` and set `WHATSAPP_TEMPLATE_NAME`. Each business enters its phone-number ID in Settings → Channels. |
-| **Phone (Exotel)** | Exotel App Bazaar | Flow: **Voicebot** applet with URL `wss://api.yourdomain.in/ws/exotel?biz=<shop-slug>`, then a **Connect** applet to the owner's mobile (for handoffs). The business enters the Exotel number in Settings → Channels; the Share kit then shows its call-forwarding codes. |
+| **Phone (Exotel)** | Exotel App Bazaar | Set `EXOTEL_WS_TOKEN` in `.env` (a long random string). Flow: **Voicebot** applet with URL `wss://api.yourdomain.in/ws/exotel?biz=<shop-slug>&token=<EXOTEL_WS_TOKEN>`, then a **Connect** applet to the owner's mobile (for handoffs). The business enters the Exotel number in Settings → Channels; the Share kit then shows its call-forwarding codes. |
 
 After editing `.env`: `docker compose up -d` (only the changed services restart).
 

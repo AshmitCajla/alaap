@@ -314,7 +314,7 @@ def test_returning_caller_is_greeted_by_name_and_remembered():
     confirm(c, call(ap.prepare_booking, c, customer_name="Aman", service_id=cut, start="2026-11-10 17:00"))
     llm = FakeLLM([say("Ji Aman ji.")])
     e = Engine(llm=llm, state=MemoryStore())
-    hello = e.start(SALON, "phone", "9876543210")
+    hello = e.start(SALON, "phone", "9876543210", verified=True)  # real caller ID
     assert "Aman ji" in hello.text and "Riya" in hello.text
     e.reply(hello.conversation_id, "haan")
     assert "Upcoming bookings: ref" in llm.calls[0]["messages"][0]["content"]
