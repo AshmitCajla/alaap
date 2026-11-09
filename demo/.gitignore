@@ -1,0 +1,7 @@
+.venv/
+frames/
+build/
+review/
+ffmpeg
+*.log
+__pycache__/

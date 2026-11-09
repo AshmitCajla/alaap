@@ -365,16 +365,16 @@ class Engine:
 
     @staticmethod
     def _early_hangup(call: dict, calls: list, spoken: list, text: str) -> bool:
-        """end_call only once the job is finished and said: never in the same step as another action (e.g. a silent
-        confirm-and-hang-up that never tells the caller their booking number), never before saying anything unless the
-        caller said bye."""
+        """end_call only when the caller is saying goodbye, and never in the same step as another action (e.g. a silent
+        confirm-and-hang-up that never tells the caller their booking number, or "milte hain!" and gone before the
+        caller had finished)."""
         if call.get("function", {}).get("name") != "end_call":
             return False
-        return len(calls) > 1 or not (spoken or BYE.search(text or ""))
+        return len(calls) > 1 or not BYE.search(text or "")
 
     def _refuse_hangup(self, ctx: Context, call: dict) -> dict:
-        result = {"error": "Don't hang up yet. First tell the customer the result in words (e.g. 'Ho gaya ji, booking "
-                           "number ...'), then end the call only after they say bye."}
+        result = {"error": "Don't hang up yet: the caller hasn't said bye. Tell them the result if you haven't "
+                           "(e.g. 'Ho gaya ji, booking number ...') and ask if there's anything else."}
         self._log(ctx, "tool", f"end_call({{}}) -> {json.dumps(result, ensure_ascii=False)}")
         return {"role": "tool", "tool_call_id": call["id"], "name": "end_call", "content": json.dumps(result)}
 

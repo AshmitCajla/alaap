@@ -480,3 +480,13 @@ def test_no_silent_hang_up_after_confirming():
     assert not r.end and "Ho gaya" in r.text
     with db.session() as s:
         assert s.scalar(select(func.count(models.Appointment.id)).where(models.Appointment.conversation_id == cid)) == 1
+
+
+def test_no_hang_up_before_the_caller_says_bye():
+    llm = FakeLLM([{"role": "assistant", "content": "Milte hain kal!", "tool_calls": [
+                       {"id": "e", "type": "function", "function": {"name": "end_call", "arguments": "{}"}}]},
+                   say("Aur kuch madad karoon?")])
+    e = Engine(llm=llm, state=MemoryStore())
+    cid = e.start(SALON, "phone", "9876543210", verified=True).conversation_id
+    r = e.reply(cid, "haan ji theek hai")
+    assert not r.end and "Aur kuch" in r.text

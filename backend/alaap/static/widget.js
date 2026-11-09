@@ -280,7 +280,11 @@
         for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 0x8000;
         const src = out.createBufferSource(); src.buffer = ab; src.connect(gain);
         playAt = Math.max(playAt, out.currentTime + 0.03); src.start(playAt); playAt += ab.duration; sources.push(src);
-        src.onended = () => { sources = sources.filter((x) => x !== src); };
+        src.onended = () => {
+          sources = sources.filter((x) => x !== src);
+          // Finished talking: the server only says "listening" after an interruption, so show it here too.
+          if (!sources.length && state === "speaking") { state = "listening"; if (!micBlocked) statusEl.textContent = S.listening; }
+        };
       } else if (m.event === "clear") {
         sources.forEach((s) => { try { s.stop(); } catch (_) {} }); sources = []; playAt = 0;
       } else if (m.event === "state") {

@@ -1,0 +1,142 @@
+{
+ "scenes": {
+  "hook": [
+   {
+    "file": "nar_hook_0.wav",
+    "text": "Every day, small businesses across India miss customer calls.",
+    "dur": 3.84
+   },
+   {
+    "file": "nar_hook_1.wav",
+    "text": "The owner is busy at the counter, the shop has closed for the night, or two phones ring at once.",
+    "dur": 5.04
+   },
+   {
+    "file": "nar_hook_2.wav",
+    "text": "Each missed call can be a booking that goes to the shop next door.",
+    "dur": 3.52
+   }
+  ],
+  "solution": [
+   {
+    "file": "nar_solution_0.wav",
+    "text": "Alaap is an AI front desk for these shops.",
+    "dur": 2.48
+   },
+   {
+    "file": "nar_solution_1.wav",
+    "text": "It answers phone calls, WhatsApp and web chat in Hindi, Punjabi and English, the way customers actually speak.",
+    "dur": 7.04
+   },
+   {
+    "file": "nar_solution_2.wav",
+    "text": "It books appointments, takes orders, and passes anything it can't solve to the owner.",
+    "dur": 4.56
+   }
+  ],
+  "call_intro": [
+   {
+    "file": "nar_call_intro_0.wav",
+    "text": "Here's a live call to a demo salon. The caller's voice is synthesized; everything else is the live app.",
+    "dur": 6.0
+   }
+  ],
+  "call": [],
+  "dashboard": [
+   {
+    "file": "nar_dashboard_0.wav",
+    "text": "The booking lands in the owner's dashboard right away, with the customer's name, number and reference.",
+    "dur": 5.2
+   },
+   {
+    "file": "nar_dashboard_1.wav",
+    "text": "A WhatsApp confirmation and a reminder are queued automatically. WhatsApp isn't connected in this demo, so they wait in the outbox.",
+    "dur": 7.76
+   }
+  ],
+  "gnani": [
+   {
+    "file": "nar_gnani_0.wav",
+    "text": "The voice runs on Gnani AI.",
+    "dur": 2.56
+   },
+   {
+    "file": "nar_gnani_1.wav",
+    "text": "Gnani's Prisma speech recognition streams the caller's audio in real time, understands Hindi, Punjabi, English and code-mixed speech, and detects when the caller has finished speaking.",
+    "dur": 10.88
+   },
+   {
+    "file": "nar_gnani_2.wav",
+    "text": "Gnani's Timbre text-to-speech gives the assistant its voice, streamed sentence by sentence, so it starts talking while the rest of the reply is still being prepared.",
+    "dur": 9.28
+   }
+  ],
+  "voices": [
+   {
+    "file": "nar_voices_0.wav",
+    "text": "Each shop picks its assistant's voice from thirteen Gnani voices.",
+    "dur": 4.16
+   }
+  ],
+  "owner": [
+   {
+    "file": "nar_owner_0.wav",
+    "text": "Owners run it in plain language. Asking it to make the facial nine hundred rupees updates the price list.",
+    "dur": 5.68
+   }
+  ],
+  "setup": [
+   {
+    "file": "nar_setup_0.wav",
+    "text": "New shops are set up in minutes: paste a rate card or a photo, and the language model reads the services, prices and hours for review.",
+    "dur": 8.08
+   }
+  ],
+  "tech": [
+   {
+    "file": "nar_tech_0.wav",
+    "text": "Under the hood: FastAPI and Next.js, with Gnani for speech and Google Gemini for reasoning.",
+    "dur": 6.32
+   },
+   {
+    "file": "nar_tech_1.wav",
+    "text": "Nothing is booked until the customer hears a read-back and says yes. Row locks prevent double bookings, and forty-four automated tests guard the behaviour.",
+    "dur": 9.12
+   }
+  ],
+  "close": [
+   {
+    "file": "nar_close_0.wav",
+    "text": "Alaap gives every small shop a front desk that never misses a call, speaks its customers' language, and never invents a price.",
+    "dur": 7.92
+   },
+   {
+    "file": "nar_close_1.wav",
+    "text": "Alaap. Har call ka jawab.",
+    "dur": 2.08
+   }
+  ]
+ },
+ "caller": [
+  {
+   "file": "caller_0.wav",
+   "text": "Sat Sri Akal ji. Kal shaam saade chhe baje gents haircut ho jayega? Mera naam Rohit hai.",
+   "dur": 5.36
+  },
+  {
+   "file": "caller_1.wav",
+   "text": "Mera number hai nau aath ek do teen, chaar paanch chhe saat shunya.",
+   "dur": 4.16
+  },
+  {
+   "file": "caller_2.wav",
+   "text": "Haan ji, pakka kar do.",
+   "dur": 1.6
+  },
+  {
+   "file": "caller_3.wav",
+   "text": "Bas ji, bahut dhanyavaad.",
+   "dur": 1.84
+  }
+ ]
+}

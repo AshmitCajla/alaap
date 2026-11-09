@@ -1,0 +1,46 @@
+{
+  "narrator_voice": "Devansh",
+  "caller_voice": "Avinash",
+  "scenes": [
+    {"id": "hook", "lines": [
+      "Every day, small businesses across India miss customer calls.",
+      "The owner is busy at the counter, the shop has closed for the night, or two phones ring at once.",
+      "Each missed call can be a booking that goes to the shop next door."
+    ]},
+    {"id": "solution", "lines": [
+      "Alaap is an AI front desk for these shops.",
+      "It answers phone calls, WhatsApp and web chat in Hindi, Punjabi and English, the way customers actually speak.",
+      "It books appointments, takes orders, and passes anything it can't solve to the owner."
+    ]},
+    {"id": "call_intro", "lines": [
+      "Here's a live call to a demo salon. The caller's voice is synthesized; everything else is the live app."
+    ]},
+    {"id": "call", "lines": []},
+    {"id": "dashboard", "lines": [
+      "The booking lands in the owner's dashboard right away, with the customer's name, number and reference.",
+      "A WhatsApp confirmation and a reminder are queued automatically. WhatsApp isn't connected in this demo, so they wait in the outbox."
+    ]},
+    {"id": "gnani", "lines": [
+      "The voice runs on Gnani AI.",
+      "Gnani's Prisma speech recognition streams the caller's audio in real time, understands Hindi, Punjabi, English and code-mixed speech, and detects when the caller has finished speaking.",
+      "Gnani's Timbre text-to-speech gives the assistant its voice, streamed sentence by sentence, so it starts talking while the rest of the reply is still being prepared."
+    ]},
+    {"id": "voices", "lines": [
+      "Each shop picks its assistant's voice from thirteen Gnani voices."
+    ]},
+    {"id": "owner", "lines": [
+      "Owners run it in plain language. Asking it to make the facial nine hundred rupees updates the price list."
+    ]},
+    {"id": "setup", "lines": [
+      "New shops are set up in minutes: paste a rate card or a photo, and the language model reads the services, prices and hours for review."
+    ]},
+    {"id": "tech", "lines": [
+      "Under the hood: FastAPI and Next.js, with Gnani for speech and Google Gemini for reasoning.",
+      "Nothing is booked until the customer hears a read-back and says yes. Row locks prevent double bookings, and forty-four automated tests guard the behaviour."
+    ]},
+    {"id": "close", "lines": [
+      "Alaap gives every small shop a front desk that never misses a call, speaks its customers' language, and never invents a price.",
+      "Alaap. Har call ka jawab."
+    ]}
+  ]
+}

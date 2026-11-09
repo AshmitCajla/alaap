@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="step.js"></script>
+<style>
+.flow{display:grid;grid-template-columns:1fr 70px 1fr 70px 1fr;align-items:stretch;margin-top:64px}
+.arrow{display:grid;place-items:center;color:#0d7a6f;font-size:54px;font-weight:800}
+.card{display:flex;flex-direction:column}
+.badge{display:inline-block;align-self:flex-start;font-size:18px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:99px;background:#e4f3f0;color:#0d7a6f;margin-bottom:16px}
+.card.g{border:3px solid #0d7a6f;box-shadow:0 22px 60px rgba(13,122,111,.18)}
+.card.m{background:#fafbf9}
+.card .badge.o{background:#fdf3e2;color:#a35a07}
+ul{margin-top:16px;padding-left:0;list-style:none}
+li{font-size:23px;line-height:1.4;color:#3c4846;padding:7px 0 7px 34px;position:relative}
+li::before{content:"✓";position:absolute;left:0;color:#16794a;font-weight:800}
+.ends{display:flex;justify-content:space-between;margin-top:26px;font-size:24px;color:#5b6866;font-weight:600}
+</style></head><body><div class="wrap" style="justify-content:flex-start;padding-top:96px">
+<div class="kicker s" data-step="0">Gnani AI integration</div>
+<h2 class="s" data-step="0">The voice runs on Gnani AI</h2>
+<div class="flow">
+ <div class="card g s" data-step="1"><span class="badge">Gnani Prisma · STT</span><b>Hears the caller</b>
+  <ul><li>Streams call audio over a WebSocket, in real time</li><li>Hindi, Punjabi, English &amp; code-mixed speech</li><li>Detects when the caller has finished</li></ul></div>
+ <div class="arrow s" data-step="1">→</div>
+ <div class="card m s" data-step="1" style="transition-delay:.25s"><span class="badge o">Google Gemini · LLM</span><b>Decides what to do</b>
+  <ul><li>Calls tools: free slots, bookings, orders</li><li>Reads back and waits for a clear yes</li><li>Answers only from the shop's own data</li></ul></div>
+ <div class="arrow s" data-step="2">→</div>
+ <div class="card g s" data-step="2"><span class="badge">Gnani Timbre · TTS</span><b>Speaks the reply</b>
+  <ul><li>Streamed sentence by sentence</li><li>Starts talking while the rest is still being written</li><li>13 voices to choose from</li></ul></div>
+</div>
+<div class="ends s" data-step="1"><span>Caller speaks →</span><span class="s" data-step="2">→ caller hears Riya</span></div>
+</div><div class="foot"><span>Also used for WhatsApp voice notes: Prisma transcribes, Timbre replies.</span><span>api.vachana.ai</span></div></body></html>
