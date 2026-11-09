@@ -24,7 +24,7 @@ for n in A.ORDER:
     else:
         if A.MAN["scenes"].get(n) and n in ("hook", "gnani", "tech", "close", "call_intro", "solution", "dashboard"):
             rec = min(rec, A.nar_starts(n)[1] + (1.3 if n == "close" else 0.5))
-        lengths[n] = rec
+        lengths[n] = rec - A.TRIM_END.get(n, 0.0)
 start, g = {}, 0.0
 for n in A.ORDER:
     start[n] = g; g += lengths[n] - A.XF

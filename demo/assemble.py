@@ -21,6 +21,7 @@ FPS, SR, XF = 30, 48000, 0.4
 ORDER = ["hook", "solution", "call_intro", "call", "dashboard", "gnani", "owner", "setup", "tech", "close"]
 NAR_START, GAP = 0.5, 0.3
 MAX_SILENCE = 0.6
+TRIM_END = {"setup": 0.6}  # seconds cut from the end of a scene's hold, to avoid dead air at the join
 META = json.loads((FR / "meta.json").read_text())
 MAN = json.loads((HERE / "audio" / "manifest.json").read_text())
 TRANSLATE = json.loads((HERE / "call_captions.json").read_text())
@@ -95,7 +96,7 @@ def call_material():
     # Stop after Riya's "anything else?" (the goodbye exchange is cut for length), and skip most of "Connecting…".
     last_caller = max(s for s, _ in voice["caller"])
     end_at = max(e for s, e in merged if e < last_caller) + 1.0
-    keep = [[max(s, merged[0][0] - 1.0) if i == 0 else s, min(e, end_at)] for i, (s, e) in enumerate(keep) if s < end_at]
+    keep = [[max(s, merged[0][0] - 0.6) if i == 0 else s, min(e, end_at)] for i, (s, e) in enumerate(keep) if s < end_at]
     cuts = [(a, g) for a, g in cuts if a < end_at]
     return track, keep, cuts, d["events"], t0, voice["caller"]
 
@@ -194,6 +195,7 @@ def main():
             if MAN["scenes"].get(name) and name in ("hook", "gnani", "tech", "close", "call_intro", "solution", "dashboard"):
                 _, end = nar_starts(name)
                 rec = min(rec, end + (1.3 if name == "close" else 0.5))
+            rec -= TRIM_END.get(name, 0.0)
             keeps[name], lengths[name] = [[0.0, rec]], rec
     starts, g = {}, 0.0
     for name in ORDER:

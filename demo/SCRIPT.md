@@ -1,6 +1,6 @@
 # Alaap demo — narration script and call transcript
 
-Final video: `alaap-demo.mp4`, 2:56, 1920×1080. Narration voiced with Gnani Timbre (voice: Devansh).
+Final video: `alaap-demo.mp4`, 2:50, 1920×1080. Narration voiced with Gnani Timbre (voice: Devansh).
 
 ## 0:00 — Opening hook: the problem
 
@@ -47,7 +47,7 @@ No narration. The call below is real: the caller's lines were synthesized (Gnani
 | Riya (Gnani Timbre) | Zaroor ji, bahut dhanaywad! | Of course, thank you so much! |
 | Riya (Gnani Timbre) | Phir milenge, bye bye. | See you again. Bye bye. |
 
-## 1:29 — Owner dashboard: booking + WhatsApp queue
+## 1:28 — Owner dashboard: booking + WhatsApp queue
 
 > The booking lands in the owner's dashboard right away, with the customer's name, number and reference.
 
@@ -68,19 +68,19 @@ No narration. The call below is real: the caller's lines were synthesized (Gnani
 > Owners run it in plain language. Asking it to make the facial nine hundred rupees updates the price list.
 
 
-## 2:15 — New shop setup from a rate card (team console)
+## 2:13 — New shop setup from a rate card (team console)
 
 > New shops are set up in minutes: paste a rate card or a photo, and the language model reads the services, prices and hours for review.
 
 
-## 2:27 — Technical highlights
+## 2:22 — Technical highlights
 
 > Under the hood: FastAPI and Next.js, with Gnani for speech and Google Gemini for reasoning.
 
 > Nothing is booked until the customer hears a read-back and says yes. Row locks prevent double bookings, and forty-four automated tests guard the behaviour.
 
 
-## 2:43 — Closing
+## 2:38 — Closing
 
 > Alaap gives every small shop a front desk that never misses a call, speaks its customers' language, and never invents a price.
 

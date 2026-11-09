@@ -181,7 +181,7 @@ async def scene_owner(r):
         reply = p.locator(".msg.alaap").last
         await r.highlight(reply, 3200)
         t_reply = time.time() - r.t0
-        await r.until(max(end + TAIL, t_reply + 3.0))
+        await r.until(max(end + 0.3, t_reply + 1.4))  # short hold on the reply: no dead air
 
 
 async def scene_setup(r):
@@ -209,8 +209,7 @@ async def scene_setup(r):
         await r.highlight(table, 3500)
         await r.zoom(table, 1.18, 900)
         t_read = time.time() - r.t0
-        await r.until(max(end + TAIL, t_read + 3.2))
-        await r.unzoom(500)
+        await r.until(max(end + 0.3, t_read + 1.6))  # short hold on the result: no dead air
 
 
 async def main(only):
