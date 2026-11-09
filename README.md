@@ -1,5 +1,25 @@
 # Alaap — AI front desk for Indian businesses
 
+> **The Great Indian AI Internship Challenge by Gnani AI · submission by Ashmit Cajla**
+>
+> 📄 **[One-page solution pitch (PDF)](docs/Alaap-Solution-Pitch.pdf)** · [same pitch on GitHub](PITCH.md)
+> 🎬 **[Demo video, 2:56](demo/alaap-demo.mp4)** — a real call booked end to end ([script & transcript](demo/SCRIPT.md))
+> 🗣️ **Gnani AI:** Prisma streaming speech-to-text hears every caller; Timbre streaming text-to-speech is the assistant's voice
+> (and the video's narration). See [how they're used](#how-gnani-ai-is-used).
+> ▶️ **Run it locally:** `./demo.sh` (demo data, API on :8000, dashboard on :3000) — full setup below.
+
+[![Solution pitch](docs/pitch-preview.png)](docs/Alaap-Solution-Pitch.pdf)
+
+## How Gnani AI is used
+
+| Model | Where | What it does in Alaap |
+|---|---|---|
+| **Prisma** streaming STT (`wss://api.vachana.ai/stt/v3/stream`) | every live call (`backend/alaap/speech.py`, `channels/voice.py`) | Transcribes Hindi, Punjabi, English and code-mixed speech in real time; its voice-activity detection ends each caller turn; the shop's services and products are sent as keyterms |
+| **Prisma** REST STT | WhatsApp voice notes, web voice messages | Transcribes recorded voice notes before the assistant answers |
+| **Timbre** streaming TTS (`wss://api.vachana.ai/api/v1/tts`) | every live call | Speaks each reply sentence by sentence as the language model writes it; 13 voices per shop; numbers are converted to natural spoken words first (`spoken.py`) |
+| **Timbre** REST TTS | voice-note replies, voice previews, daily voice summary | Generates WhatsApp voice notes and the owner's voice previews |
+
+
 Answers calls, WhatsApp (text and voice notes) and web chats in Hindi, Punjabi, English or a mix.
 It takes bookings and orders, sends UPI links, qualifies leads, handles complaints, follows up,
 and tells the owner what happened, including a daily voice note in their language.

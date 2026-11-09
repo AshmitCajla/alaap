@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Alaap — Solution Pitch</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 210mm; height: 297mm; font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #15201e; font-size: 9.3pt; line-height: 1.42; }
+.page { padding: 11mm 13mm 9mm; height: 297mm; display: flex; flex-direction: column; gap: 3.6mm; }
+.top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0d7a6f; padding-bottom: 3mm; }
+.brand { display: flex; align-items: center; gap: 3mm; }
+.logo { width: 11mm; height: 11mm; border-radius: 3mm; background: linear-gradient(135deg, #0d7a6f, #19ad9a); display: grid; place-items: center; }
+h1 { font-size: 22pt; letter-spacing: -.02em; line-height: 1; }
+.tag { color: #0d7a6f; font-weight: 700; font-size: 9.6pt; margin-top: 1mm; white-space: nowrap; }
+.meta { text-align: right; font-size: 8.2pt; color: #5b6866; line-height: 1.5; }
+.meta b { color: #15201e; }
+h2 { font-size: 10.2pt; color: #0d7a6f; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1.2mm; }
+.lead { font-size: 10.4pt; line-height: 1.45; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.box { background: #f4f8f7; border: 1px solid #dce7e4; border-radius: 3mm; padding: 3mm 3.6mm; }
+.box.g { background: #fff; border: 1.5px solid #0d7a6f; }
+ul { padding-left: 4mm; } li { margin: .5mm 0; }
+.flow { display: grid; grid-template-columns: 1fr 5mm 1fr 5mm 1fr; align-items: stretch; }
+.flow .arr { display: grid; place-items: center; color: #0d7a6f; font-weight: 800; font-size: 12pt; }
+.flow .box b { display: block; font-size: 9.6pt; margin-bottom: .6mm; }
+.badge { display: inline-block; font-size: 7pt; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: .4mm 1.8mm; border-radius: 9mm; background: #e4f3f0; color: #0d7a6f; margin-bottom: 1mm; }
+.badge.o { background: #fdf3e2; color: #a35a07; }
+table { width: 100%; border-collapse: collapse; font-size: 8.6pt; }
+td { padding: .9mm 0; vertical-align: top; border-bottom: 1px solid #e3e8e6; }
+td:first-child { width: 31mm; font-weight: 700; color: #2d3a38; }
+.foot { margin-top: auto; display: flex; justify-content: space-between; font-size: 8.2pt; color: #5b6866; border-top: 1px solid #dce7e4; padding-top: 2mm; }
+a { color: #0d7a6f; text-decoration: none; font-weight: 600; }
+</style></head>
+<body><div class="page">
+
+<div class="top">
+  <div class="brand"><div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01"/></svg></div>
+    <div><h1>Alaap</h1><div class="tag">An AI front desk for India's small shops · "Har call ka jawab"</div></div></div>
+  <div class="meta"><b>The Great Indian AI Internship Challenge</b><br>by Gnani AI · Solution pitch by Ashmit Cajla<br>
+    <a href="https://github.com/AshmitCajla/alaap">github.com/AshmitCajla/alaap</a></div>
+</div>
+
+<div><h2>The problem</h2>
+<p class="lead">India's salons, clinics, kiranas and coaching centres run on phone calls, and most have one person to answer them.
+Calls go unanswered while the owner serves someone at the counter, after closing time, or when two phones ring at once,
+and a missed call is often a booking that goes to the shop next door. Menu-based IVRs and English chatbots don't fit
+customers who speak Hindi, Punjabi and the mix in between.</p></div>
+
+<div><h2>The solution</h2>
+<p class="lead"><b>Alaap answers every call, WhatsApp message and web chat like a trained receptionist</b>, in the customer's own language.
+It checks real free slots and stock, books appointments, takes orders with UPI payment links, logs complaints, qualifies
+leads, and passes anything it can't solve to the owner on WhatsApp. Owners see everything in a dashboard and change prices
+or timings by simply telling it ("Facial ka rate 900 kar do"). Shops can set it up in minutes from a photo of their rate
+card, or the Alaap team sets it up for them and lends them a phone number.</p></div>
+
+<div><h2>How Gnani AI powers the voice</h2>
+<div class="flow">
+  <div class="box g"><span class="badge">Gnani Prisma · STT</span><b>Hears the caller</b>
+    <ul><li>Streaming recognition over WebSocket, live on every call</li><li>Hindi, Punjabi, English and code-mixed speech (indic-auto, codemix)</li>
+    <li>Its voice-activity detection ends each turn; shop's service names sent as keyterms</li></ul></div>
+  <div class="arr">→</div>
+  <div class="box"><span class="badge o">Gemini · reasoning</span><b>Decides and acts</b>
+    <ul><li>Tool calls: free slots, bookings, orders, complaints, leads</li><li>Reads back and saves only after a clear "yes"</li>
+    <li>Answers only from the shop's own data; never invents prices</li></ul></div>
+  <div class="arr">→</div>
+  <div class="box g"><span class="badge">Gnani Timbre · TTS</span><b>Speaks the reply</b>
+    <ul><li>Streamed sentence by sentence, so it starts talking early</li><li>13 voices; numbers spoken naturally ("saade chhe baje")</li>
+    <li>WhatsApp voice notes: Prisma transcribes, Timbre replies</li></ul></div>
+</div></div>
+
+<div class="grid2">
+  <div><h2>Built to be trusted</h2>
+  <table>
+    <tr><td>Safe actions</td><td>Every booking/order is checked in code, read back, and confirmed only after the customer replies.</td></tr>
+    <tr><td>Correct under load</td><td>Database row locks: no double bookings or overselling (tested with 20 simultaneous confirmations).</td></tr>
+    <tr><td>Security</td><td>Per-shop data isolation; only real caller ID unlocks a customer's bookings; signed webhooks.</td></tr>
+    <tr><td>Tested</td><td>44 automated tests, live conversation checks against the real models, and an end-to-end voice-call test.</td></tr>
+    <tr><td>Stack</td><td>FastAPI · Next.js · Postgres · Redis · Docker + Caddy (HTTPS) · Exotel, WhatsApp Cloud API, Razorpay.</td></tr>
+  </table></div>
+  <div><h2>Status and next steps</h2>
+  <table>
+    <tr><td>Working MVP</td><td>Live voice calls in the browser, web chat, owner dashboard, Ask Alaap, team console, billing. Demo: a real call books a slot end to end (<a href="https://github.com/AshmitCajla/alaap/blob/main/demo/alaap-demo.mp4">video, 2:56</a>).</td></tr>
+    <tr><td>Honest numbers</td><td>On free-tier Gemini, the caller hears Riya 2.3–3.0 s after speaking and her answer in 2.6–4.9 s; a paid tier should bring this down.</td></tr>
+    <tr><td>Next</td><td>Connect the Exotel phone line and WhatsApp Business API, then pilot with 10 shops in Patiala.</td></tr>
+    <tr><td>Business model</td><td>Monthly plans ₹999 / ₹2,499 / ₹5,999 with a 14-day trial; done-for-you setup for owners who won't touch a dashboard.</td></tr>
+  </table></div>
+</div>
+
+<div class="box" style="font-size:9.6pt"><b>Impact:</b> a small shop gets a front desk that never misses a call, speaks its customers' language, and never
+invents a price, for the cost of a few days of a helper's wages a month. The owner gets every booking, order and complaint on WhatsApp.</div>
+
+<div class="foot"><span>Repo &amp; setup: <a href="https://github.com/AshmitCajla/alaap">github.com/AshmitCajla/alaap</a></span>
+<span>Demo video: <a href="https://github.com/AshmitCajla/alaap/blob/main/demo/alaap-demo.mp4">demo/alaap-demo.mp4</a></span></div>
+</div></body></html>
